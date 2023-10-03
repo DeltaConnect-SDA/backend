@@ -1,8 +1,15 @@
-import { Body, Controller, Ip, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  Get,
+  Query,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { UserService } from 'src/user/user.service';
-import { ActivationDTO } from './dto/activation.dto';
 import { AuthService } from './auth.service';
-import { RegisterDTO } from './dto';
+import { RegisterDTO, VerifyEmailDTO, ActivationDTO } from './dto';
 
 @Controller({
   path: 'auth',
@@ -20,8 +27,14 @@ export class AuthController {
   }
 
   @Post('verify/email/request')
-  emailVerification(@Body() data: ActivationDTO, @Ip() ip: number) {
-    console.log(ip);
+  @HttpCode(HttpStatus.CREATED)
+  emailVerification(@Body() data: ActivationDTO) {
     return this.authService.emailVerificationRequest(data);
+  }
+
+  @Get('verify/email')
+  async verifyEmail(@Query() data: VerifyEmailDTO) {
+    const email = await this.authService.decodeConfirmationToken(data.token);
+    return this.authService.verifyEmail(email);
   }
 }

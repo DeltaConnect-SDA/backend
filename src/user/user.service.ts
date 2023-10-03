@@ -12,7 +12,10 @@ export class UserService {
       include: { UserDetail: true },
     });
 
-    delete user.password;
+    if (user) {
+      delete user.password;
+    }
+
     return user;
   }
   async findRole(type?: Role, id?: string) {

@@ -9,4 +9,8 @@ export class ActivationDTO {
   @IsMobilePhone('id-ID', {}, { message: 'Nomor Hp tidak sesuai!' })
   @IsNotEmpty({ message: 'Nomor Hp harus diisi.' })
   phone: string;
+
+  @IsNotEmpty()
+  @IsString()
+  name: string;
 }

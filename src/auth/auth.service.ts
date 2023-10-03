@@ -1,21 +1,33 @@
 import {
   ForbiddenException,
   Injectable,
+  Inject,
   NotFoundException,
+  BadRequestException,
+  HttpException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ActivationDTO } from './dto/activation.dto';
 import { UserService } from 'src/user/user.service';
-import { RegisterDTO } from './dto';
+import { RegisterDTO, VerficationTokenPayload } from './dto';
 import * as argon from 'argon2';
 import { Role } from './enum/role.enum';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { EmailService } from 'src/email/email.service';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private userService: UserService,
+    private emailService: EmailService,
+    private jwtService: JwtService,
+    private configService: ConfigService,
+    @Inject(CACHE_MANAGER) private cacheService: Cache,
   ) {}
 
   async register(data: RegisterDTO) {
@@ -50,9 +62,17 @@ export class AuthService {
       });
 
       // Send the email verification request
-      this.emailVerificationRequest({ email: data.email, phone: data.phone });
+      try {
+        this.emailVerificationRequest({
+          email: data.email,
+          phone: data.phone,
+          name: [data.firstName, data.lastName].join(' '),
+        });
+      } catch (error) {
+        throw new NotFoundException(error);
+      }
 
-      return user;
+      return { status: 201, message: 'Email berhasil dikirim!', data: user };
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
@@ -67,7 +87,12 @@ export class AuthService {
 
   async emailVerificationRequest(data: ActivationDTO) {
     // Is user found?
-    const user = await this.userService.findByEmail(data.email);
+    const user = await this.prisma.user.findUnique({
+      where: {
+        email: data.email,
+      },
+      include: { UserDetail: true },
+    });
 
     // If user not found, throw not found
     if (!user) {
@@ -81,15 +106,101 @@ export class AuthService {
       throw new ForbiddenException('Email already verified!');
     }
 
-    // Send OTP to user
-    this.sendEmailOTP(data.email);
+    // Check if the verification request has not reached the limit
+    const requestCount: number = (await this.cacheService.get(
+      `emailVerificationRequestCount-${data.email}`,
+    )) as number;
+
+    if (requestCount && requestCount >= 3) {
+      throw new HttpException(
+        {
+          status: 'Too many requests!',
+          code: 429,
+          message:
+            'Permintaan verifikasi mecapai batas harian. Coba lagi besok!',
+        },
+        429,
+      );
+    }
+
+    // generate verification code and url
+    const code = Math.floor(1000 + Math.random() * 9000);
+    const payload: VerficationTokenPayload = { code, email: data.email };
+
+    const token = await this.jwtService.sign(payload, {
+      secret: this.configService.get('JWT_VERIFICATION_TOKEN_SECRET'),
+      expiresIn: '5m',
+    });
+
+    const actionUrl = `${this.configService.get(
+      'EMAIL_CONFIRMATION_URL',
+    )}?token=${token}&code=${code}`;
+
+    // Send verification to user
+    try {
+      this.emailService.sendVerificationEmail({
+        code,
+        name: data.name,
+        toEmail: data.email,
+        actionUrl: actionUrl,
+      });
+
+      // Store user verification request count to redis
+      await this.cacheService.set(
+        `emailVerificationRequestCount-${data.email}`,
+        requestCount + 1,
+        86400,
+      );
+
+      return { success: true, code: 201, message: 'Email berhasil terkirim!' };
+    } catch (error) {
+      throw new Error('Gagal mengirim email!');
+    }
     console.log(data);
-    return;
+  }
+  async verifyEmail(email: string) {
+    const user = await this.userService.findByEmail(email);
+
+    if (!user) {
+      throw new BadRequestException('Invalid token!');
+    } else if (user.UserDetail.isEmailVerified) {
+      throw new ForbiddenException('Email already confirmed');
+    }
+
+    try {
+      await this.prisma.user.update({
+        where: { email },
+        data: {
+          UserDetail: { update: { isEmailVerified: true } },
+        },
+      });
+
+      return {
+        status: 'success',
+        code: 201,
+        message: 'Email berhasil diverikasi!',
+      };
+    } catch (err) {
+      throw new Error(err?.message);
+    }
+  }
+  async decodeConfirmationToken(token: string) {
+    try {
+      const payload = await this.jwtService.verify(token, {
+        secret: this.configService.get('JWT_VERIFICATION_TOKEN_SECRET'),
+      });
+
+      if (typeof payload === 'object' && 'email' in payload) {
+        return payload.email;
+      }
+      throw new BadRequestException('Token invalid!');
+    } catch (error) {
+      if (error?.name === 'TokenExpiredError') {
+        throw new BadRequestException('Email confirmation token expired');
+      }
+      throw new BadRequestException('Bad confirmation token');
+    }
   }
   async sendPhoneOTP() {}
-  async sendEmailOTP(email: string) {
-    return email;
-  }
-  async verifyEmail() {}
   async verifyPhone() {}
 }
