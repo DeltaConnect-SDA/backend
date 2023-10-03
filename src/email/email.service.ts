@@ -40,7 +40,7 @@ export class EmailService {
               ],
               TemplateID: EmailTemplate.emailVerification,
               TemplateLanguage: true,
-              Subject: '[TEST] Verifikasi E-mail',
+              Subject: 'Verifikasi E-mail',
               Variables: {
                 name: data.name,
                 code: data.code,
