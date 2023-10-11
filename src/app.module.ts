@@ -5,25 +5,46 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { EmailModule } from './email/email.module';
 import { CacheModule } from '@nestjs/cache-manager';
+import { WhatsappService } from './whatsapp/whatsapp.service';
+import { WhatsappModule } from './whatsapp/whatsapp.module';
+import { HttpModule } from '@nestjs/axios';
 import * as redisStore from 'cache-manager-redis-store';
+import * as Joi from 'joi';
+import { IsUniqueConstraint } from './shared/validation/is-unique-constraint';
 
 @Module({
   imports: [
     CacheModule.registerAsync({
       isGlobal: true,
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
+      useFactory: async (config: ConfigService) => ({
         store: redisStore,
-        host: configService.get('REDIS_HOST'),
-        port: configService.get('REDIS_PORT'),
+        host: config.get('REDIS_HOST'),
+        port: config.get('REDIS_PORT'),
       }),
       inject: [ConfigService],
     }),
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validationSchema: Joi.object({
+        DATABASE_URL: Joi.string(),
+        PORT: Joi.number().port().default(3000),
+        APP_HOST: Joi.string().domain(),
+        APP_NAME: Joi.string(),
+        REDIS_PORT: Joi.number().default(6379),
+        REDIS_HOST: Joi.string(),
+        EMAIL_CONFIRMATION_URL: Joi.string(),
+        JWT_VERIFICATION_TOKEN_EXPIRATION_TIME: Joi.number(),
+        JWT_VERIFICATION_TOKEN_SECRET: Joi.string(),
+      }),
+    }),
     AuthModule,
     UserModule,
     PrismaModule,
     EmailModule,
+    WhatsappModule,
+    HttpModule,
   ],
+  providers: [WhatsappService, IsUniqueConstraint],
 })
 export class AppModule {}

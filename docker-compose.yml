@@ -10,5 +10,17 @@ services:
       POSTGRES_DB: nest
     networks:
       - DeltaConnect
+  cache:
+    image: redis:latest
+    restart: always
+    ports:
+      - 6379:6379
+    volumes:
+      - cache:/data
+    networks:
+      - DeltaConnect
 networks:
   DeltaConnect:
+volumes:
+  cache:
+    driver: local

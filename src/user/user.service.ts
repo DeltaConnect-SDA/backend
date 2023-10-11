@@ -18,6 +18,20 @@ export class UserService {
 
     return user;
   }
+
+  async findByPhone(phone: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { phone },
+      include: { UserDetail: true },
+    });
+
+    if (user) {
+      delete user.password;
+    }
+
+    return user;
+  }
+
   async findRole(type?: Role, id?: string) {
     try {
       const foundRole = await this.prisma.role.findFirst({

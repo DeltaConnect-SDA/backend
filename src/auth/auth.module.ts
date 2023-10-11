@@ -5,6 +5,7 @@ import { UserService } from 'src/user/user.service';
 import { EmailService } from 'src/email/email.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { WhatsappService } from 'src/whatsapp/whatsapp.service';
 
 @Module({
   providers: [
@@ -13,6 +14,7 @@ import { ConfigService } from '@nestjs/config';
     EmailService,
     JwtService,
     ConfigService,
+    WhatsappService,
   ],
   controllers: [AuthController],
 })
