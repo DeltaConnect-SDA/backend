@@ -21,10 +21,11 @@ model User {
   createAt DateTime @default(now())
   updateAt DateTime @updatedAt
 
-  role         Role       @relation(fields: [roleId], references: [id])
+  role         Role        @relation(fields: [roleId], references: [id])
   roleId       String
-  UserDetail   UserDetail @relation(fields: [userDetailId], references: [id], onDelete: Cascade)
-  userDetailId String     @unique
+  UserDetail   UserDetail  @relation(fields: [userDetailId], references: [id], onDelete: Cascade)
+  userDetailId String      @unique
+  Complaint    Complaint[]
 }
 
 model UserDetail {
@@ -50,12 +51,90 @@ model Role {
   createAt DateTime @default(now())
   updateAt DateTime @updatedAt
 
-  User User[]
+  User              User[]
+  assignedComplaint Complaint[] @relation("AssignedToRole")
+}
+
+model Status {
+  id    Int    @id @default(autoincrement())
+  title String
+  color String
+
+  createAt          DateTime            @default(now())
+  updateAt          DateTime            @updatedAt
+  Complaint         Complaint[]
+  ComplaintActivity ComplaintActivity[]
 }
 
 model Complaint {
+  id     Int    @id @default(autoincrement())
+  ref_id String @unique
+  title  String
+
+  category        String
+  description     String
+  detail_location String
+  GPSaddress      String
+  lat             String
+  long            String
+  village         String
+
+  total_feedback Int?
+  total_score    Int?
+
+  status   Status @relation(fields: [statusId], references: [id])
+  statusId Int    @default(1)
+
+  assignTo Role?   @relation(name: "AssignedToRole", fields: [roleId], references: [id])
+  roleId   String?
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  createAt          DateTime            @default(now())
+  updateAt          DateTime            @updatedAt
+  ComplaintActivity ComplaintActivity[]
+}
+
+model Category {
   id    Int    @id @default(autoincrement())
   title String
+
+  createAt DateTime @default(now())
+  updateAt DateTime @updatedAt
+}
+
+model ComplaintActivity {
+  id          Int       @id @default(autoincrement())
+  status      Status    @relation(fields: [statusId], references: [id])
+  statusId    Int
+  complaint   Complaint @relation(fields: [complaintId], references: [id])
+  complaintId Int
+
+  title       String
+  descripiton String
+  notes       String
+
+  createAt DateTime                  @default(now())
+  updateAt DateTime                  @updatedAt
+  images   ComplaintActivityImages[]
+}
+
+model ComplaintActivityImages {
+  id                  Int               @id @default(autoincrement())
+  complaintActivity   ComplaintActivity @relation(fields: [complaintActivityId], references: [id])
+  complaintActivityId Int
+
+  path String
+
+  createAt DateTime @default(now())
+  updateAt DateTime @updatedAt
+}
+
+model Priority {
+  id    Int    @id @default(autoincrement())
+  title String
+  color String
 
   createAt DateTime @default(now())
   updateAt DateTime @updatedAt
