@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  // Logika seeding data
+  // Roles
   await prisma.role.createMany({
     data: [
       {
@@ -40,6 +40,77 @@ async function main() {
         name: 'Masyarakat',
         description: 'Masyarakat Kabupaten Sidoarjo',
         type: 'masyarakat',
+      },
+    ],
+  });
+
+  // Status
+  await prisma.status.createMany({
+    data: [
+      {
+        title: 'Menunggu',
+        color: 'ORANGE',
+      },
+      {
+        title: 'Verifikasi',
+        color: 'TOSCA',
+      },
+      {
+        title: 'Proses',
+        color: 'PURPLE',
+      },
+      {
+        title: 'Selesai',
+        color: 'GREEN',
+      },
+      {
+        title: 'Dibatalkan',
+        color: 'RED',
+      },
+    ],
+  });
+
+  // Priority
+  await prisma.priority.createMany({
+    data: [
+      {
+        title: '!!! Tinggi',
+        color: 'RED',
+      },
+      {
+        title: '!! Sedang',
+        color: 'ORANGE',
+      },
+      {
+        title: '! Rendah',
+        color: 'YELLOW',
+      },
+    ],
+  });
+
+  // Category
+  await prisma.category.createMany({
+    data: [
+      {
+        title: 'Pohon',
+      },
+      {
+        title: 'Kebersihan',
+      },
+      {
+        title: 'Saluran Air',
+      },
+      {
+        title: 'Penerangan Jalan',
+      },
+      {
+        title: 'Jalan',
+      },
+      {
+        title: 'Kelistrikan',
+      },
+      {
+        title: 'Lainnya',
       },
     ],
   });

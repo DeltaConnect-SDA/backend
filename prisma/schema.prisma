@@ -71,7 +71,12 @@ model Complaint {
   ref_id String @unique
   title  String
 
-  category        String
+  category   Category @relation(fields: [categoryId], references: [id])
+  categoryId Int
+
+  priority   Priority @relation(fields: [priorityId], references: [id])
+  priorityId Int
+
   description     String
   detail_location String
   GPSaddress      String
@@ -85,8 +90,8 @@ model Complaint {
   status   Status @relation(fields: [statusId], references: [id])
   statusId Int    @default(1)
 
-  assignTo Role?   @relation(name: "AssignedToRole", fields: [roleId], references: [id])
-  roleId   String?
+  assignTo   Role?   @relation(name: "AssignedToRole", fields: [assignToId], references: [id])
+  assignToId String?
 
   user   User   @relation(fields: [userId], references: [id])
   userId String
@@ -100,8 +105,9 @@ model Category {
   id    Int    @id @default(autoincrement())
   title String
 
-  createAt DateTime @default(now())
-  updateAt DateTime @updatedAt
+  createAt  DateTime    @default(now())
+  updateAt  DateTime    @updatedAt
+  Complaint Complaint[]
 }
 
 model ComplaintActivity {
@@ -136,6 +142,7 @@ model Priority {
   title String
   color String
 
-  createAt DateTime @default(now())
-  updateAt DateTime @updatedAt
+  createAt  DateTime    @default(now())
+  updateAt  DateTime    @updatedAt
+  Complaint Complaint[]
 }
