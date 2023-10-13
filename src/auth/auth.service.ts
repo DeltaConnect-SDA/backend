@@ -74,7 +74,10 @@ export class AuthService {
       // } catch (error) {
       //   throw new NotFoundException(error);
       // }
-      return [user];
+
+      const token = await this.signToken(user.id, user.email);
+
+      return [{ user }, token];
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
@@ -97,6 +100,25 @@ export class AuthService {
     } finally {
       await this.prisma.$disconnect();
     }
+  }
+
+  async signToken(
+    userId: string,
+    email: string,
+  ): Promise<{ access_token: string }> {
+    const data = {
+      sub: userId,
+      email,
+    };
+
+    const token = await this.jwtService.signAsync(data, {
+      secret: this.configService.get('JWT_SECRET'),
+      expiresIn: '30d',
+    });
+
+    return {
+      access_token: token,
+    };
   }
 
   async emailVerificationRequest(data: ActivationDTO) {

@@ -93,7 +93,7 @@ model Complaint {
   assignTo   Role?   @relation(name: "AssignedToRole", fields: [assignToId], references: [id])
   assignToId String?
 
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String
 
   createAt          DateTime            @default(now())
@@ -114,7 +114,7 @@ model ComplaintActivity {
   id          Int       @id @default(autoincrement())
   status      Status    @relation(fields: [statusId], references: [id])
   statusId    Int
-  complaint   Complaint @relation(fields: [complaintId], references: [id])
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
   complaintId Int
 
   title       String
@@ -128,7 +128,7 @@ model ComplaintActivity {
 
 model ComplaintActivityImages {
   id                  Int               @id @default(autoincrement())
-  complaintActivity   ComplaintActivity @relation(fields: [complaintActivityId], references: [id])
+  complaintActivity   ComplaintActivity @relation(fields: [complaintActivityId], references: [id], onDelete: Cascade)
   complaintActivityId Int
 
   path String

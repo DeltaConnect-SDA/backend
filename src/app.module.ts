@@ -11,6 +11,9 @@ import { HttpModule } from '@nestjs/axios';
 import * as redisStore from 'cache-manager-redis-store';
 import * as Joi from 'joi';
 import { IsUniqueConstraint } from './shared/validation/is-unique-constraint';
+import { CategoryModule } from './category/category.module';
+import { PriorityModule } from './priority/priority.module';
+import { ComplaintModule } from './complaint/complaint.module';
 
 @Module({
   imports: [
@@ -44,6 +47,9 @@ import { IsUniqueConstraint } from './shared/validation/is-unique-constraint';
     EmailModule,
     WhatsappModule,
     HttpModule,
+    CategoryModule,
+    PriorityModule,
+    ComplaintModule,
   ],
   providers: [WhatsappService, IsUniqueConstraint],
 })

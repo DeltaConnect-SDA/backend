@@ -7,6 +7,7 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { UserService } from 'src/user/user.service';
 import { AuthService } from './auth.service';
@@ -17,6 +18,9 @@ import {
   VerifyPhoneDTO,
 } from './dto';
 import { Response } from 'express';
+import { JwtGuard } from './guard';
+import { GetUser } from './decorator';
+import { User } from '@prisma/client';
 
 @Controller({
   path: 'auth',
@@ -47,6 +51,12 @@ export class AuthController {
         error: err.error,
       });
     }
+  }
+
+  @UseGuards(JwtGuard)
+  @Get('profile')
+  async profile(@GetUser() user: User) {
+    return user;
   }
 
   @Post('verify/email/request')

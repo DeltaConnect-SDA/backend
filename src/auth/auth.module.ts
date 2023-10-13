@@ -3,11 +3,13 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UserService } from 'src/user/user.service';
 import { EmailService } from 'src/email/email.service';
-import { JwtService } from '@nestjs/jwt';
+import { JwtModule, JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { WhatsappService } from 'src/whatsapp/whatsapp.service';
+import { JwtStrategy } from './strategy';
 
 @Module({
+  imports: [JwtModule.register({})],
   providers: [
     AuthService,
     UserService,
@@ -15,6 +17,7 @@ import { WhatsappService } from 'src/whatsapp/whatsapp.service';
     JwtService,
     ConfigService,
     WhatsappService,
+    JwtStrategy,
   ],
   controllers: [AuthController],
 })
