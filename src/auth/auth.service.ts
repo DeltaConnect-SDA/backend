@@ -10,7 +10,12 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ActivationDTO } from './dto/activation.dto';
 import { UserService } from 'src/user/user.service';
-import { RegisterDTO, VerficationTokenPayload, VerifyEmailDTO } from './dto';
+import {
+  LoginDTO,
+  RegisterDTO,
+  VerficationTokenPayload,
+  VerifyEmailDTO,
+} from './dto';
 import * as argon from 'argon2';
 import { Role } from './enum/role.enum';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
@@ -38,7 +43,7 @@ export class AuthService {
     const password = await argon.hash(data.password);
 
     // Get role id
-    const role = await this.userService.findRole(Role.Masyarakat);
+    const role = await this.userService.findRole(Role.PUBLIC);
 
     // Save the new user in the database
     try {
@@ -100,6 +105,33 @@ export class AuthService {
     } finally {
       await this.prisma.$disconnect();
     }
+  }
+
+  async signIn(data: LoginDTO) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        email: data.email,
+      },
+    });
+
+    if (!user) {
+      throw {
+        message: 'Pengguna tidak ditumukan!',
+        code: HttpStatus.NOT_FOUND,
+        error: 'User not found',
+      };
+    }
+    const pwMatches = await argon.verify(user.password, data.password);
+
+    if (!pwMatches) {
+      throw {
+        message: 'Email atau password salah!',
+        code: HttpStatus.BAD_REQUEST,
+        error: 'Invalid password',
+      };
+    }
+
+    return this.signToken(user.id, user.email);
   }
 
   async signToken(

@@ -14,9 +14,26 @@ import { IsUniqueConstraint } from './shared/validation/is-unique-constraint';
 import { CategoryModule } from './category/category.module';
 import { PriorityModule } from './priority/priority.module';
 import { ComplaintModule } from './complaint/complaint.module';
+import { ImageModule } from './image/image.module';
+import { BullModule } from '@nestjs/bull';
+import { ImageQueue } from './queue/image.queue';
+import { ImageService } from './image/image.service';
 
 @Module({
   imports: [
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (config: ConfigService) => ({
+        redis: {
+          host: config.get('REDIS_HOST'),
+          port: config.get('REDIS_PORT'),
+        },
+      }),
+      inject: [ConfigService],
+    }),
+    BullModule.registerQueue({
+      name: 'imageUpload',
+    }),
     CacheModule.registerAsync({
       isGlobal: true,
       imports: [ConfigModule],
@@ -24,6 +41,7 @@ import { ComplaintModule } from './complaint/complaint.module';
         store: redisStore,
         host: config.get('REDIS_HOST'),
         port: config.get('REDIS_PORT'),
+        ttl: 300,
       }),
       inject: [ConfigService],
     }),
@@ -50,7 +68,8 @@ import { ComplaintModule } from './complaint/complaint.module';
     CategoryModule,
     PriorityModule,
     ComplaintModule,
+    ImageModule,
   ],
-  providers: [WhatsappService, IsUniqueConstraint],
+  providers: [WhatsappService, IsUniqueConstraint, ImageQueue, ImageService],
 })
 export class AppModule {}

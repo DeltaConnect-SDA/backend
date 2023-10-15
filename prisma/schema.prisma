@@ -18,8 +18,8 @@ model User {
   phone     String  @unique
   password  String?
 
-  createAt DateTime @default(now())
-  updateAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   role         Role        @relation(fields: [roleId], references: [id])
   roleId       String
@@ -37,9 +37,9 @@ model UserDetail {
   isPhoneVerified Boolean @default(false)
   isVerified      Boolean @default(false)
 
-  createAt DateTime @default(now())
-  updateAt DateTime @updatedAt
-  user     User?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User?
 }
 
 model Role {
@@ -48,8 +48,8 @@ model Role {
   description String?
   type        String
 
-  createAt DateTime @default(now())
-  updateAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   User              User[]
   assignedComplaint Complaint[] @relation("AssignedToRole")
@@ -60,8 +60,8 @@ model Status {
   title String
   color String
 
-  createAt          DateTime            @default(now())
-  updateAt          DateTime            @updatedAt
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
   Complaint         Complaint[]
   ComplaintActivity ComplaintActivity[]
 }
@@ -96,17 +96,30 @@ model Complaint {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String
 
-  createAt          DateTime            @default(now())
-  updateAt          DateTime            @updatedAt
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
   ComplaintActivity ComplaintActivity[]
+  ComplaintImages   ComplaintImages[]
+}
+
+model ComplaintImages {
+  id          Int       @id @default(autoincrement())
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  complaintId Int
+
+  path        String
+  placeholder String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Category {
   id    Int    @id @default(autoincrement())
   title String
 
-  createAt  DateTime    @default(now())
-  updateAt  DateTime    @updatedAt
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
   Complaint Complaint[]
 }
 
@@ -121,9 +134,9 @@ model ComplaintActivity {
   descripiton String
   notes       String
 
-  createAt DateTime                  @default(now())
-  updateAt DateTime                  @updatedAt
-  images   ComplaintActivityImages[]
+  createdAt DateTime                  @default(now())
+  updatedAt DateTime                  @updatedAt
+  images    ComplaintActivityImages[]
 }
 
 model ComplaintActivityImages {
@@ -131,10 +144,11 @@ model ComplaintActivityImages {
   complaintActivity   ComplaintActivity @relation(fields: [complaintActivityId], references: [id], onDelete: Cascade)
   complaintActivityId Int
 
-  path String
+  path        String
+  placeholder String?
 
-  createAt DateTime @default(now())
-  updateAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Priority {
@@ -142,7 +156,7 @@ model Priority {
   title String
   color String
 
-  createAt  DateTime    @default(now())
-  updateAt  DateTime    @updatedAt
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
   Complaint Complaint[]
 }

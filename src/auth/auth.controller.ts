@@ -16,6 +16,7 @@ import {
   VerifyEmailDTO,
   ActivationDTO,
   VerifyPhoneDTO,
+  LoginDTO,
 } from './dto';
 import { Response } from 'express';
 import { JwtGuard } from './guard';
@@ -41,6 +42,27 @@ export class AuthController {
         success: true,
         code: HttpStatus.CREATED,
         message: 'Registrasi pengguna berhasil!',
+        data: user,
+      });
+    } catch (err) {
+      return res.status(err.code).json({
+        success: false,
+        code: err.code,
+        message: err.message,
+        error: err.error,
+      });
+    }
+  }
+
+  @Post('login')
+  async login(@Body() data: LoginDTO, @Res() res: Response) {
+    try {
+      const user = await this.authService.signIn(data);
+
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        code: HttpStatus.OK,
+        message: 'Pengguna berhasil masuk!',
         data: user,
       });
     } catch (err) {

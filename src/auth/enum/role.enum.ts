@@ -1,6 +1,6 @@
 export enum Role {
-  SuperAdmin = 'super-admin',
-  PetugasOtorisasi = 'petugas-otorisasi',
-  PelaksanaTeknis = 'pelaksana-teknis',
-  Masyarakat = 'masyarakat',
+  SUPER_ADMIN = 'super-admin',
+  AUTHORIZER = 'petugas-otorisasi',
+  TECHNICAL_EXECUTOR = 'pelaksana-teknis',
+  PUBLIC = 'masyarakat',
 }

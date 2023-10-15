@@ -13,7 +13,7 @@ export class RegisterDTO {
   @IsNotEmpty({ message: 'Nama depan harus diisi!' })
   firstName: string;
 
-  @MaxLength(50, { message: 'Nama belakang maksimal 10 karakter' })
+  @MaxLength(50, { message: 'Nama belakang maksimal 50 karakter' })
   @MinLength(3, { message: 'Nama belakang minimal 3 karakter' })
   @IsNotEmpty({ message: 'Nama belakang harus diisi!' })
   lastName: string;
