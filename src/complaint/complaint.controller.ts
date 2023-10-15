@@ -9,6 +9,7 @@ import {
   UseInterceptors,
   Get,
   Param,
+  Delete,
 } from '@nestjs/common';
 import { ComplaintService } from './complaint.service';
 import { ComplaintDTO } from './dto';
@@ -116,6 +117,91 @@ export class ComplaintController {
         success: false,
         code: err.code,
         message: err.message,
+        error: err.error,
+      });
+    }
+  }
+
+  @UseGuards(JwtGuard)
+  @Get('/:id/auth')
+  async showWithSavedStatus(
+    @Param('id') id: string,
+    @GetUser('id') userId: string,
+    @Res() res: Response,
+  ) {
+    try {
+      const complaints =
+        await this.complaintService.findComplaintWithSaveStatus(
+          parseInt(id, 10),
+          userId,
+        );
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        code: HttpStatus.OK,
+        message: 'Berhasil mengambil data laporan!',
+        data: complaints,
+      });
+    } catch (err) {
+      return res.status(err.code).json({
+        success: false,
+        code: err.code,
+        message: err.message,
+        error: err.error,
+      });
+    }
+  }
+
+  @UseGuards(JwtGuard)
+  @Post('save')
+  async save(
+    @Body('complaintId') complaintId: number,
+    @GetUser('id') userId: string,
+    @Res() res: Response,
+  ) {
+    try {
+      const complaint = await this.complaintService.addToSavedComplaints(
+        parseInt(complaintId.toString(), 10),
+        userId,
+      );
+      return res.status(HttpStatus.CREATED).json({
+        success: true,
+        code: HttpStatus.OK,
+        message: 'Laporan berhasil disimpan!',
+        data: complaint,
+      });
+    } catch (err) {
+      return res.status(err.code).json({
+        success: false,
+        code: err.code,
+        message: 'Internal Server Error',
+        error: err.error,
+      });
+    }
+  }
+
+  @UseGuards(JwtGuard)
+  @Delete('/:id/save')
+  async unSave(
+    @Param('id') complaintId: string,
+    @GetUser('id') userId: string,
+    @Res() res: Response,
+  ) {
+    try {
+      const complaint = await this.complaintService.removeSavedComplaints(
+        parseInt(complaintId.toString(), 10),
+        userId,
+      );
+      return res.status(HttpStatus.NO_CONTENT).json({
+        success: true,
+        code: HttpStatus.OK,
+        message: 'Laporan berhasil dihapus dari simpan!',
+        data: complaint,
+      });
+    } catch (err) {
+      return res.status(err.code).json({
+        success: false,
+        code: err.code,
+        message: 'Internal Server Error',
         error: err.error,
       });
     }

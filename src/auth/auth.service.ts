@@ -112,6 +112,14 @@ export class AuthService {
       where: {
         email: data.email,
       },
+      select: {
+        id: true,
+        email: true,
+        phone: true,
+        firstName: true,
+        LastName: true,
+        password: true,
+      },
     });
 
     if (!user) {
@@ -131,7 +139,10 @@ export class AuthService {
       };
     }
 
-    return this.signToken(user.id, user.email);
+    delete user.password;
+
+    const token = await this.signToken(user.id, user.email);
+    return [{ user }, token];
   }
 
   async signToken(

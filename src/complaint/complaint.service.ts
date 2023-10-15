@@ -94,6 +94,7 @@ export class ComplaintService {
   async findByUser(userId: string) {
     const complaints = await this.prismaService.complaint.findMany({
       where: { userId },
+      orderBy: { createdAt: 'desc' },
       include: {
         ComplaintImages: { select: { path: true, placeholder: true } },
         category: { select: { title: true, id: true } },
@@ -133,6 +134,31 @@ export class ComplaintService {
     return complaints;
   }
 
+  async findComplaintWithSaveStatus(complaintId: number, userId: string) {
+    const complaint = await this.prismaService.complaint.findUnique({
+      where: { id: complaintId },
+      include: {
+        ComplaintImages: { select: { path: true, placeholder: true } },
+        category: { select: { title: true, id: true } },
+        priority: { select: { title: true, id: true, color: true } },
+        status: { select: { title: true, color: true } },
+        ComplaintSaved: {
+          where: { userId },
+          select: { id: true },
+        },
+      },
+    });
+
+    if (!complaint) {
+      throw {
+        message: 'Laporan tidak ditemukan.',
+        code: HttpStatus.NOT_FOUND,
+        error: 'Complaint Not Found',
+      };
+    }
+    return complaint;
+  }
+
   async findLatest() {
     const complaints = await this.prismaService.complaint.findMany({
       include: {
@@ -140,6 +166,7 @@ export class ComplaintService {
         category: { select: { title: true, id: true } },
         priority: { select: { title: true, id: true, color: true } },
         status: { select: { title: true, color: true } },
+        ComplaintSaved: { select: { userId: true } },
       },
       orderBy: { createdAt: 'desc' },
       take: 3,
@@ -153,5 +180,53 @@ export class ComplaintService {
       };
     }
     return complaints;
+  }
+
+  async addToSavedComplaints(complaintId: number, userId: string) {
+    try {
+      const complaint = await this.prismaService.$transaction(
+        async (prisma) => {
+          return prisma.complaintSaved.create({
+            data: {
+              complaintId,
+              userId,
+            },
+          });
+        },
+      );
+
+      return complaint;
+    } catch (err) {
+      Logger.error(err.message, 'User save complaint');
+      throw {
+        message: err.message,
+        code: HttpStatus.INTERNAL_SERVER_ERROR,
+        error: 'There was an error processing your request.',
+      };
+    } finally {
+      this.prismaService.$disconnect();
+    }
+  }
+  async removeSavedComplaints(complaintId: number, userId: string) {
+    try {
+      const complaint = await this.prismaService.$transaction(
+        async (prisma) => {
+          return prisma.complaintSaved.deleteMany({
+            where: { complaintId, userId },
+          });
+        },
+      );
+
+      return complaint;
+    } catch (err) {
+      Logger.error(err.message, 'User delete saved complaint');
+      throw {
+        message: err.message,
+        code: HttpStatus.INTERNAL_SERVER_ERROR,
+        error: 'There was an error processing your request.',
+      };
+    } finally {
+      this.prismaService.$disconnect();
+    }
   }
 }
