@@ -19,7 +19,7 @@ import { JwtGuard } from 'src/auth/guard';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { log } from 'console';
 
-@Controller({ path: 'complaint', version: '1' })
+@Controller({ path: 'complaints', version: '1' })
 export class ComplaintController {
   constructor(private complaintService: ComplaintService) {}
   // new ParseFilePipe({
@@ -102,58 +102,35 @@ export class ComplaintController {
     }
   }
 
-  @Get('/:id')
-  async show(@Param('id') id: string, @Res() res: Response) {
-    try {
-      const complaints = await this.complaintService.findById(parseInt(id, 10));
-      return res.status(HttpStatus.OK).json({
-        success: true,
-        code: HttpStatus.OK,
-        message: 'Berhasil mengambil data laporan!',
-        data: complaints,
-      });
-    } catch (err) {
-      return res.status(err.code).json({
-        success: false,
-        code: err.code,
-        message: err.message,
-        error: err.error,
-      });
-    }
-  }
-
   @UseGuards(JwtGuard)
-  @Get('/:id/auth')
-  async showWithSavedStatus(
-    @Param('id') id: string,
+  @Get('saved')
+  async userSavedComplaints(
     @GetUser('id') userId: string,
     @Res() res: Response,
   ) {
     try {
       const complaints =
-        await this.complaintService.findComplaintWithSaveStatus(
-          parseInt(id, 10),
-          userId,
-        );
+        await this.complaintService.getComplaintSavedByUser(userId);
+
       return res.status(HttpStatus.OK).json({
         success: true,
         code: HttpStatus.OK,
-        message: 'Berhasil mengambil data laporan!',
+        message: 'Sukses mengambil laporan yang disimpan!',
         data: complaints,
       });
     } catch (err) {
-      return res.status(err.code).json({
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
         code: err.code,
-        message: err.message,
+        message: 'Internal Server Error',
         error: err.error,
       });
     }
   }
 
   @UseGuards(JwtGuard)
-  @Post('save')
-  async save(
+  @Post('saved')
+  async saveComplaint(
     @Body('complaintId') complaintId: number,
     @GetUser('id') userId: string,
     @Res() res: Response,
@@ -180,8 +157,8 @@ export class ComplaintController {
   }
 
   @UseGuards(JwtGuard)
-  @Delete('/:id/save')
-  async unSave(
+  @Delete('saved/:id')
+  async unSaveComplaint(
     @Param('id') complaintId: string,
     @GetUser('id') userId: string,
     @Res() res: Response,
@@ -202,6 +179,55 @@ export class ComplaintController {
         success: false,
         code: err.code,
         message: 'Internal Server Error',
+        error: err.error,
+      });
+    }
+  }
+
+  @Get(':id')
+  async show(@Param('id') id: string, @Res() res: Response) {
+    try {
+      const complaints = await this.complaintService.findById(parseInt(id, 10));
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        code: HttpStatus.OK,
+        message: 'Berhasil mengambil data laporan!',
+        data: complaints,
+      });
+    } catch (err) {
+      return res.status(err.code).json({
+        success: false,
+        code: err.code,
+        message: err.message,
+        error: err.error,
+      });
+    }
+  }
+
+  @UseGuards(JwtGuard)
+  @Get(':id/auth')
+  async showWithSavedStatus(
+    @Param('id') id: string,
+    @GetUser('id') userId: string,
+    @Res() res: Response,
+  ) {
+    try {
+      const complaints =
+        await this.complaintService.findComplaintWithSaveStatus(
+          parseInt(id, 10),
+          userId,
+        );
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        code: HttpStatus.OK,
+        message: 'Berhasil mengambil data laporan!',
+        data: complaints,
+      });
+    } catch (err) {
+      return res.status(err.code).json({
+        success: false,
+        code: err.code,
+        message: err.message,
         error: err.error,
       });
     }

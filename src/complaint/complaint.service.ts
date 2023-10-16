@@ -3,7 +3,6 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { ComplaintDTO } from './dto';
 import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
-import { log } from 'console';
 
 @Injectable()
 export class ComplaintService {
@@ -77,7 +76,6 @@ export class ComplaintService {
       }));
 
       await this.complaintImageUpload.addBulk(jobs);
-      log(complaint);
       return complaint;
     } catch (err) {
       Logger.error(err.message, 'User create complaint');
@@ -227,6 +225,58 @@ export class ComplaintService {
       };
     } finally {
       this.prismaService.$disconnect();
+    }
+  }
+
+  async getComplaintSavedByUser(userId: string) {
+    try {
+      const complaints = await this.prismaService.complaintSaved.findMany({
+        where: { userId },
+        include: {
+          complaint: {
+            select: {
+              id: true,
+              title: true,
+              createdAt: true,
+              village: true,
+              status: {
+                select: {
+                  title: true,
+                  color: true,
+                },
+              },
+              category: {
+                select: {
+                  title: true,
+                },
+              },
+              ComplaintImages: {
+                select: {
+                  path: true,
+                  placeholder: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (complaints.length === 0) {
+        throw {
+          error: 'Complaint Not Found',
+          code: 404,
+          message: 'Belum ada laporan yang disimpan!',
+        };
+      }
+
+      return complaints;
+    } catch (err) {
+      Logger.error(err, 'Get saved complaints');
+      throw {
+        error: 'There was an error processing your request.',
+        code: 500,
+        message: err.message,
+      };
     }
   }
 }
