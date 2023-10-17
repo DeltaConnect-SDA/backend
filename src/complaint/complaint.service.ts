@@ -3,6 +3,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { ComplaintDTO } from './dto';
 import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
+import { Role } from 'src/auth/enum/role.enum';
 
 @Injectable()
 export class ComplaintService {
@@ -16,7 +17,16 @@ export class ComplaintService {
     data: ComplaintDTO,
     userId: string,
     images: Express.Multer.File[],
+    user: any,
   ) {
+    if (user.role.type !== Role.PUBLIC && !user.UserDetail.isPhoneVerified) {
+      throw {
+        message: 'Forbidden cccess',
+        code: HttpStatus.FORBIDDEN,
+        error: 'Anda tidak memiliki izin untuk melapor!',
+      };
+    }
+
     try {
       const date = new Date();
       const dateString = `${date.getFullYear().toString().slice(-2)}${(
@@ -78,7 +88,7 @@ export class ComplaintService {
       await this.complaintImageUpload.addBulk(jobs);
       return complaint;
     } catch (err) {
-      Logger.error(err.message, 'User create complaint');
+      Logger.error(err, 'User create complaint');
       throw {
         message: err.message,
         code: HttpStatus.INTERNAL_SERVER_ERROR,
@@ -132,7 +142,7 @@ export class ComplaintService {
     return complaints;
   }
 
-  async findComplaintWithSaveStatus(complaintId: number, userId: string) {
+  async findComplaintWithSaveStatus(complaintId: number, user: any) {
     const complaint = await this.prismaService.complaint.findUnique({
       where: { id: complaintId },
       include: {
@@ -141,7 +151,7 @@ export class ComplaintService {
         priority: { select: { title: true, id: true, color: true } },
         status: { select: { title: true, color: true } },
         ComplaintSaved: {
-          where: { userId },
+          where: { userId: user.id },
           select: { id: true },
         },
       },

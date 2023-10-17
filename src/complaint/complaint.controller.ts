@@ -10,31 +10,29 @@ import {
   Get,
   Param,
   Delete,
+  Req,
 } from '@nestjs/common';
 import { ComplaintService } from './complaint.service';
 import { ComplaintDTO } from './dto';
 import { GetUser } from 'src/auth/decorator';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { JwtGuard } from 'src/auth/guard';
 import { FilesInterceptor } from '@nestjs/platform-express';
-import { log } from 'console';
 
 @Controller({ path: 'complaints', version: '1' })
 export class ComplaintController {
   constructor(private complaintService: ComplaintService) {}
-  // new ParseFilePipe({
-  //   validators: [new FileTypeValidator({ fileType: /\.(jpg|jpeg|png)$/ })],
-  // }),
+
   @UseInterceptors(FilesInterceptor('images'))
   @UseGuards(JwtGuard)
   @Post()
-  async addNew(
+  async store(
     @UploadedFiles() images: Express.Multer.File[],
     @Body() data: ComplaintDTO,
     @GetUser('id') userId: string,
+    @Req() req: Request,
     @Res() res: Response,
   ) {
-    log(images);
     try {
       const complaint = await this.complaintService.create(
         {
@@ -44,6 +42,7 @@ export class ComplaintController {
         },
         userId,
         images,
+        req.user,
       );
       return res.status(HttpStatus.CREATED).json({
         success: true,
@@ -185,22 +184,51 @@ export class ComplaintController {
   }
 
   @Get(':id')
-  async show(@Param('id') id: string, @Res() res: Response) {
-    try {
-      const complaints = await this.complaintService.findById(parseInt(id, 10));
-      return res.status(HttpStatus.OK).json({
-        success: true,
-        code: HttpStatus.OK,
-        message: 'Berhasil mengambil data laporan!',
-        data: complaints,
-      });
-    } catch (err) {
-      return res.status(err.code).json({
-        success: false,
-        code: err.code,
-        message: err.message,
-        error: err.error,
-      });
+  async show(
+    @Param('id') id: string,
+    @Res() res: Response,
+    @Req() req: Request,
+  ) {
+    if (!req.user) {
+      try {
+        const complaints = await this.complaintService.findById(
+          parseInt(id, 10),
+        );
+        return res.status(HttpStatus.OK).json({
+          success: true,
+          code: HttpStatus.OK,
+          message: 'Berhasil mengambil data laporan!',
+          data: complaints,
+        });
+      } catch (err) {
+        return res.status(err.code).json({
+          success: false,
+          code: err.code,
+          message: err.message,
+          error: err.error,
+        });
+      }
+    } else {
+      try {
+        const complaints =
+          await this.complaintService.findComplaintWithSaveStatus(
+            parseInt(id, 10),
+            req.user,
+          );
+        return res.status(HttpStatus.OK).json({
+          success: true,
+          code: HttpStatus.OK,
+          message: 'Berhasil mengambil data laporan!',
+          data: complaints,
+        });
+      } catch (err) {
+        return res.status(err.code).json({
+          success: false,
+          code: err.code,
+          message: err.message,
+          error: err.error,
+        });
+      }
     }
   }
 
