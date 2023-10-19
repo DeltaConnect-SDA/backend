@@ -39,6 +39,23 @@ export class AuthService {
   ) {}
 
   async register(data: RegisterDTO) {
+    const foundButNotVerified = await this.prisma.user.findUnique({
+      where: { email: data.email, OR: [{ phone: data.phone }] },
+      select: {
+        UserDetail: {
+          select: { isPhoneVerified: true, isEmailVerified: true },
+        },
+      },
+    });
+
+    if (foundButNotVerified) {
+      throw {
+        message: 'Email atau nomor hp sudah terdaftar tetapi belum verifikasi',
+        code: HttpStatus.UNAUTHORIZED,
+        error: 'Contacts Not Verified',
+      };
+    }
+
     // Generate passwprd hash
     const password = await argon.hash(data.password);
 
@@ -119,6 +136,9 @@ export class AuthService {
         firstName: true,
         LastName: true,
         password: true,
+        UserDetail: {
+          select: { isEmailVerified: true, isPhoneVerified: true },
+        },
       },
     });
 
@@ -142,6 +162,7 @@ export class AuthService {
     delete user.password;
 
     const token = await this.signToken(user.id, user.email);
+
     return [{ user }, token];
   }
 
