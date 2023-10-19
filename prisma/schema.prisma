@@ -134,7 +134,7 @@ model ComplaintActivity {
 
   title       String
   descripiton String
-  notes       String
+  notes       String?
 
   createdAt DateTime                  @default(now())
   updatedAt DateTime                  @updatedAt

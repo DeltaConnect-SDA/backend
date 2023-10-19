@@ -4,6 +4,7 @@ import { ComplaintDTO } from './dto';
 import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
 import { Role } from 'src/auth/enum/role.enum';
+import { Status } from 'src/enum';
 
 @Injectable()
 export class ComplaintService {
@@ -142,7 +143,7 @@ export class ComplaintService {
     return complaints;
   }
 
-  async findComplaintWithSaveStatus(complaintId: number, user: any) {
+  async findComplaintWithSaveStatus(complaintId: number, userId: string) {
     const complaint = await this.prismaService.complaint.findUnique({
       where: { id: complaintId },
       include: {
@@ -151,7 +152,7 @@ export class ComplaintService {
         priority: { select: { title: true, id: true, color: true } },
         status: { select: { title: true, color: true } },
         ComplaintSaved: {
-          where: { userId: user.id },
+          where: { userId },
           select: { id: true },
         },
       },
@@ -287,6 +288,59 @@ export class ComplaintService {
         code: 500,
         message: err.message,
       };
+    }
+  }
+
+  async updateComplaintStatus(
+    id: number,
+    user: any,
+    statusId: Status,
+    data?: any,
+  ) {
+    console.log(data);
+    try {
+      const complaint = await this.prismaService.$transaction(
+        async (prisma) => {
+          const complaint = await prisma.complaint.findUnique({
+            where: { id },
+            select: { user: true, id: true },
+          });
+
+          if (complaint.user.id !== user.id)
+            throw {
+              error: 'Forbidden Access',
+              message: 'Anda tidak memiliki akses untuk merubah status',
+              code: HttpStatus.FORBIDDEN,
+            };
+
+          if (complaint.user.roleId === user.roleId) {
+            await prisma.complaintActivity.create({
+              data: {
+                complaintId: complaint.id,
+                title: 'Dibatalkan',
+                descripiton: 'Laporan dibatalkan oleh pengguna',
+                statusId,
+              },
+            });
+          }
+
+          return await prisma.complaint.update({
+            where: { id, userId: user.id },
+            data: { statusId },
+          });
+        },
+      );
+
+      return complaint;
+    } catch (err) {
+      Logger.error(err, 'User update complaint status');
+      throw {
+        message: err.message,
+        code: HttpStatus.INTERNAL_SERVER_ERROR,
+        error: 'There was an error processing your request.',
+      };
+    } finally {
+      this.prismaService.$disconnect();
     }
   }
 }
