@@ -47,6 +47,7 @@ export class ImageService {
 
   async blurhash(buffer: Buffer) {
     const { data, info } = await sharp(Buffer.from(buffer))
+      .resize({ width: 64 })
       .ensureAlpha()
       .raw()
       .toBuffer({
