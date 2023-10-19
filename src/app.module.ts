@@ -27,6 +27,8 @@ import { ImageService } from './image/image.service';
         redis: {
           host: config.get('REDIS_HOST'),
           port: config.get('REDIS_PORT'),
+          password: config.get('REDIS_PASSWORD'),
+          no_ready_check: true,
         },
       }),
       inject: [ConfigService],
@@ -41,6 +43,8 @@ import { ImageService } from './image/image.service';
         store: redisStore,
         host: config.get('REDIS_HOST'),
         port: config.get('REDIS_PORT'),
+        password: config.get('REDIS_PASSWORD'),
+        no_ready_check: true,
         ttl: 300,
       }),
       inject: [ConfigService],
