@@ -151,6 +151,7 @@ export class ComplaintService {
         category: { select: { title: true, id: true } },
         priority: { select: { title: true, id: true, color: true } },
         status: { select: { title: true, color: true } },
+        user: { select: { id: true } },
         ComplaintSaved: {
           where: { userId },
           select: { id: true },
@@ -240,55 +241,46 @@ export class ComplaintService {
   }
 
   async getComplaintSavedByUser(userId: string) {
-    try {
-      const complaints = await this.prismaService.complaintSaved.findMany({
-        where: { userId },
-        include: {
-          complaint: {
-            select: {
-              id: true,
-              title: true,
-              createdAt: true,
-              village: true,
-              status: {
-                select: {
-                  title: true,
-                  color: true,
-                },
+    const complaints = await this.prismaService.complaintSaved.findMany({
+      where: { userId },
+      include: {
+        complaint: {
+          select: {
+            id: true,
+            title: true,
+            createdAt: true,
+            village: true,
+            status: {
+              select: {
+                title: true,
+                color: true,
               },
-              category: {
-                select: {
-                  title: true,
-                },
+            },
+            category: {
+              select: {
+                title: true,
               },
-              ComplaintImages: {
-                select: {
-                  path: true,
-                  placeholder: true,
-                },
+            },
+            ComplaintImages: {
+              select: {
+                path: true,
+                placeholder: true,
               },
             },
           },
         },
-      });
+      },
+    });
 
-      if (complaints.length === 0) {
-        throw {
-          error: 'Complaint Not Found',
-          code: 404,
-          message: 'Belum ada laporan yang disimpan!',
-        };
-      }
-
-      return complaints;
-    } catch (err) {
-      Logger.error(err, 'Get saved complaints');
+    if (complaints.length === 0) {
       throw {
-        error: 'There was an error processing your request.',
-        code: 500,
-        message: err.message,
+        error: 'Complaint Not Found',
+        code: 404,
+        message: 'Belum ada laporan yang disimpan!',
       };
     }
+
+    return complaints;
   }
 
   async updateComplaintStatus(

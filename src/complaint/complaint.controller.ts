@@ -11,6 +11,7 @@ import {
   Param,
   Delete,
   Req,
+  Patch,
 } from '@nestjs/common';
 import { ComplaintService } from './complaint.service';
 import { ComplaintDTO } from './dto';
@@ -18,14 +19,24 @@ import { GetUser } from 'src/auth/decorator';
 import { Request, Response } from 'express';
 import { JwtGuard } from 'src/auth/guard';
 import { FilesInterceptor } from '@nestjs/platform-express';
+import { Status } from 'src/enum';
 
-@Controller({ path: 'complaints', version: '1' })
+@Controller({ version: '1' })
 export class ComplaintController {
   constructor(private complaintService: ComplaintService) {}
 
+  /**
+   * Create new complaint
+   * @param images Complaint images
+   * @param data Complaint data
+   * @param userId Creator id
+   * @param req Request
+   * @param res Response
+   * @returns Complaint data
+   */
   @UseInterceptors(FilesInterceptor('images'))
   @UseGuards(JwtGuard)
-  @Post()
+  @Post('complaints')
   async store(
     @UploadedFiles() images: Express.Multer.File[],
     @Body() data: ComplaintDTO,
@@ -60,8 +71,15 @@ export class ComplaintController {
     }
   }
 
-  @Get('latest')
+  /**
+   * Get latest complaints
+   * @param res Response
+   * @returns Latest Complaints
+   */
+  @Get('complaints/latest')
   async getLatest(@Res() res: Response) {
+    console.log('req');
+
     try {
       const complaints = await this.complaintService.findLatest();
       return res.status(HttpStatus.OK).json({
@@ -80,8 +98,14 @@ export class ComplaintController {
     }
   }
 
+  /**
+   * Get Complaints By User
+   * @param userId User Id from guards
+   * @param res Response
+   * @returns Complaints by user
+   */
   @UseGuards(JwtGuard)
-  @Get('user')
+  @Get('user/complaints')
   async getByUser(@GetUser('id') userId: string, @Res() res: Response) {
     try {
       const complaints = await this.complaintService.findByUser(userId);
@@ -101,8 +125,14 @@ export class ComplaintController {
     }
   }
 
+  /**
+   * Get saved complaints by authenticated user
+   * @param userId User Id
+   * @param res Response
+   * @returns Saved complaints by user
+   */
   @UseGuards(JwtGuard)
-  @Get('saved')
+  @Get('complaints/saved')
   async userSavedComplaints(
     @GetUser('id') userId: string,
     @Res() res: Response,
@@ -118,7 +148,7 @@ export class ComplaintController {
         data: complaints,
       });
     } catch (err) {
-      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      return res.status(err.code).json({
         success: false,
         code: err.code,
         message: 'Internal Server Error',
@@ -127,8 +157,15 @@ export class ComplaintController {
     }
   }
 
+  /**
+   * Save a complaint
+   * @param complaintId Complaint Id to save
+   * @param userId User Id want to save the complaint
+   * @param res Response
+   * @returns Complaint
+   */
   @UseGuards(JwtGuard)
-  @Post('saved')
+  @Post('complaints/saved')
   async saveComplaint(
     @Body('complaintId') complaintId: number,
     @GetUser('id') userId: string,
@@ -155,8 +192,15 @@ export class ComplaintController {
     }
   }
 
+  /**
+   * Delete complaint from saved
+   * @param complaintId Complaint id to delete
+   * @param userId User Id want to delete the complaint
+   * @param res Response
+   * @returns Complaint
+   */
   @UseGuards(JwtGuard)
-  @Delete('saved/:id')
+  @Delete('complaints/saved/:id')
   async unSaveComplaint(
     @Param('id') complaintId: string,
     @GetUser('id') userId: string,
@@ -183,61 +227,45 @@ export class ComplaintController {
     }
   }
 
-  @Get(':id')
-  async show(
-    @Param('id') id: string,
-    @Res() res: Response,
-    @Req() req: Request,
-  ) {
-    if (!req.user) {
-      try {
-        const complaints = await this.complaintService.findById(
-          parseInt(id, 10),
-        );
-        return res.status(HttpStatus.OK).json({
-          success: true,
-          code: HttpStatus.OK,
-          message: 'Berhasil mengambil data laporan!',
-          data: complaints,
-        });
-      } catch (err) {
-        return res.status(err.code).json({
-          success: false,
-          code: err.code,
-          message: err.message,
-          error: err.error,
-        });
-      }
-    } else {
-      try {
-        const complaints =
-          await this.complaintService.findComplaintWithSaveStatus(
-            parseInt(id, 10),
-            req.user,
-          );
-        return res.status(HttpStatus.OK).json({
-          success: true,
-          code: HttpStatus.OK,
-          message: 'Berhasil mengambil data laporan!',
-          data: complaints,
-        });
-      } catch (err) {
-        return res.status(err.code).json({
-          success: false,
-          code: err.code,
-          message: err.message,
-          error: err.error,
-        });
-      }
+  /**
+   * Get complaint by Id
+   * @param id Complaint Id
+   * @param res Response
+   * @returns Complaint data
+   */
+  @Get('complaints/:id')
+  async show(@Param('id') id: string, @Res() res: Response) {
+    try {
+      const complaints = await this.complaintService.findById(parseInt(id, 10));
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        code: HttpStatus.OK,
+        message: 'Berhasil mengambil data laporan!',
+        data: complaints,
+      });
+    } catch (err) {
+      return res.status(err.code).json({
+        success: false,
+        code: err.code,
+        message: err.message,
+        error: err.error,
+      });
     }
   }
 
+  /**
+   * Get complaint by Id for authenticated user
+   * @param id Complaint Id
+   * @param res Response
+   * @param userId User Id
+   * @returns Complaint data
+   */
   @UseGuards(JwtGuard)
-  @Get(':id/auth')
-  async showWithSavedStatus(
+  @Get('complaints/:id/auth')
+  async showWhenAuthenticated(
     @Param('id') id: string,
-    @GetUser('id') userId: string,
     @Res() res: Response,
+    @GetUser('id') userId: string,
   ) {
     try {
       const complaints =
@@ -259,5 +287,46 @@ export class ComplaintController {
         error: err.error,
       });
     }
+  }
+
+  @UseGuards(JwtGuard)
+  @Patch('complaints/:id/cancel')
+  async cacleComplaint(
+    @Param('id') id: string,
+    @GetUser() user: any,
+    @Res() res: Response,
+  ) {
+    try {
+      const complaint = await this.complaintService.updateComplaintStatus(
+        parseInt(id, 10),
+        user,
+        Status.CACELED,
+      );
+      return res.status(HttpStatus.CREATED).json({
+        success: true,
+        code: HttpStatus.OK,
+        message: 'Laporan berhasil dibatalkan!',
+        data: complaint,
+      });
+    } catch (err) {
+      return res.status(err.code).json({
+        success: false,
+        code: err.code,
+        message: err.message,
+        error: err.error,
+      });
+    }
+  }
+
+  @UseGuards(JwtGuard)
+  @Patch('complaints/:id/done')
+  async completeComplaint(@Body() data: any, @GetUser() user: any) {
+    return [user, data];
+  }
+
+  @UseGuards(JwtGuard)
+  @Post('complaints/:id/rating')
+  async ratingComplaint(@Body() data: any, @GetUser() user: any) {
+    return [user, data];
   }
 }
