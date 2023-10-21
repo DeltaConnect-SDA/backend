@@ -5,6 +5,7 @@ import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
 import { Role } from 'src/auth/enum/role.enum';
 import { Status } from 'src/enum';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ComplaintService {
@@ -123,24 +124,28 @@ export class ComplaintService {
   }
 
   async findById(id: number) {
-    const complaints = await this.prismaService.complaint.findUnique({
-      where: { id },
-      include: {
-        ComplaintImages: { select: { path: true, placeholder: true } },
-        category: { select: { title: true, id: true } },
-        priority: { select: { title: true, id: true, color: true } },
-        status: { select: { title: true, color: true } },
-      },
-    });
+    try {
+      const complaints = await this.prismaService.complaint.findUnique({
+        where: { id },
+        include: {
+          ComplaintImages: { select: { path: true, placeholder: true } },
+          category: { select: { title: true, id: true } },
+          priority: { select: { title: true, id: true, color: true } },
+          status: { select: { title: true, color: true } },
+        },
+      });
 
-    if (!complaints) {
-      throw {
-        message: 'Laporan tidak ditemukan.',
-        code: HttpStatus.NOT_FOUND,
-        error: 'Complaint Not Found',
-      };
+      if (!complaints) {
+        throw {
+          message: 'Laporan tidak ditemukan.',
+          code: HttpStatus.NOT_FOUND,
+          error: 'Complaint Not Found',
+        };
+      }
+      return complaints;
+    } catch (err) {
+      throw err;
     }
-    return complaints;
   }
 
   async findComplaintWithSaveStatus(complaintId: number, userId: string) {
@@ -333,6 +338,68 @@ export class ComplaintService {
       };
     } finally {
       this.prismaService.$disconnect();
+    }
+  }
+
+  async searchComplaints(
+    query: string,
+    statusId: number,
+    orderByDate: 'asc' | 'desc',
+  ) {
+    const where: Prisma.ComplaintWhereInput = {
+      OR: [
+        {
+          title: {
+            contains: query,
+            mode: 'insensitive',
+          },
+        },
+        {
+          ref_id: {
+            equals: query,
+          },
+        },
+      ],
+      statusId,
+    };
+
+    const orderBy: Prisma.ComplaintOrderByWithRelationInput = {
+      createdAt: orderByDate,
+    };
+
+    try {
+      return await this.prismaService.complaint.findMany({
+        where,
+        orderBy,
+        include: {
+          ComplaintImages: { select: { path: true, placeholder: true } },
+          category: { select: { title: true, id: true } },
+          priority: { select: { title: true, id: true, color: true } },
+          status: { select: { title: true, color: true } },
+        },
+      });
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  async countByDay() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    try {
+      return await this.prismaService.complaint.count({
+        where: {
+          createdAt: {
+            gte: today,
+            lt: tomorrow,
+          },
+        },
+      });
+    } catch (err) {
+      throw err;
     }
   }
 }

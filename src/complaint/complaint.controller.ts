@@ -12,6 +12,7 @@ import {
   Delete,
   Req,
   Patch,
+  Query,
 } from '@nestjs/common';
 import { ComplaintService } from './complaint.service';
 import { ComplaintDTO } from './dto';
@@ -20,6 +21,10 @@ import { Request, Response } from 'express';
 import { JwtGuard } from 'src/auth/guard';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { Status } from 'src/enum';
+import {
+  PrismaClientKnownRequestError,
+  PrismaClientValidationError,
+} from '@prisma/client/runtime/library';
 
 @Controller({ version: '1' })
 export class ComplaintController {
@@ -227,6 +232,119 @@ export class ComplaintController {
     }
   }
 
+  @Get('complaints/count/day')
+  async countComplaintsByDay(@Res() res: Response) {
+    try {
+      const complaint = await this.complaintService.countByDay();
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        code: HttpStatus.OK,
+        message: 'Berhasil mencari laporan!',
+        data: complaint,
+      });
+    } catch (err) {
+      if (err instanceof PrismaClientKnownRequestError) {
+        switch (err.code) {
+          case 'P2025': {
+            res.status(HttpStatus.NOT_FOUND).json({
+              success: false,
+              code: HttpStatus.NOT_FOUND,
+              message: err.message,
+              error: err.name,
+            });
+          }
+          default: {
+            console.log(err);
+
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+              success: false,
+              code: HttpStatus.INTERNAL_SERVER_ERROR,
+              message: err.message,
+              error: err.name,
+            });
+          }
+        }
+      }
+
+      if (err instanceof PrismaClientValidationError) {
+        return res.status(HttpStatus.BAD_REQUEST).json({
+          success: false,
+          code: HttpStatus.BAD_REQUEST,
+          message: 'Invalid request params',
+          error: err.name,
+        });
+      }
+
+      return res.status(err.code || HttpStatus.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        code: err.code || HttpStatus.INTERNAL_SERVER_ERROR,
+        message: err.message,
+        error: err.name || err.error,
+      });
+    }
+  }
+
+  @Get('complaints/search')
+  async searchComplaints(
+    @Query('query') query: string,
+    @Query('statusId') statusId: string,
+    @Query('orderByDate') orderByDate: 'asc' | 'desc',
+    @Res() res: Response,
+  ) {
+    try {
+      const complaint = await this.complaintService.searchComplaints(
+        query,
+        parseInt(statusId, 10),
+        orderByDate,
+      );
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        code: HttpStatus.OK,
+        message: 'Berhasil mencari laporan!',
+        data: complaint,
+      });
+    } catch (err) {
+      if (err instanceof PrismaClientKnownRequestError) {
+        switch (err.code) {
+          case 'P2025': {
+            res.status(HttpStatus.NOT_FOUND).json({
+              success: false,
+              code: HttpStatus.NOT_FOUND,
+              message: err.message,
+              error: err.name,
+            });
+          }
+          default: {
+            console.log(err);
+
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+              success: false,
+              code: HttpStatus.INTERNAL_SERVER_ERROR,
+              message: err.message,
+              error: err.name,
+            });
+          }
+        }
+      }
+
+      if (err instanceof PrismaClientValidationError) {
+        return res.status(HttpStatus.BAD_REQUEST).json({
+          success: false,
+          code: HttpStatus.BAD_REQUEST,
+          message: 'Invalid request params',
+          error: err.name,
+        });
+      }
+
+      return res.status(err.code || HttpStatus.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        code: err.code || HttpStatus.INTERNAL_SERVER_ERROR,
+        message: err.message,
+        error: err.name || err.error,
+      });
+    }
+  }
+
   /**
    * Get complaint by Id
    * @param id Complaint Id
@@ -236,19 +354,52 @@ export class ComplaintController {
   @Get('complaints/:id')
   async show(@Param('id') id: string, @Res() res: Response) {
     try {
-      const complaints = await this.complaintService.findById(parseInt(id, 10));
+      const complaint = await this.complaintService.findById(parseInt(id, 10));
+
       return res.status(HttpStatus.OK).json({
         success: true,
         code: HttpStatus.OK,
         message: 'Berhasil mengambil data laporan!',
-        data: complaints,
+        data: complaint,
       });
     } catch (err) {
-      return res.status(err.code).json({
+      if (err instanceof PrismaClientKnownRequestError) {
+        switch (err.code) {
+          case 'P2025': {
+            res.status(HttpStatus.NOT_FOUND).json({
+              success: false,
+              code: HttpStatus.NOT_FOUND,
+              message: err.message,
+              error: err.name,
+            });
+          }
+          default: {
+            console.log(err);
+
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+              success: false,
+              code: HttpStatus.INTERNAL_SERVER_ERROR,
+              message: err.message,
+              error: err.name,
+            });
+          }
+        }
+      }
+
+      if (err instanceof PrismaClientValidationError) {
+        return res.status(HttpStatus.BAD_REQUEST).json({
+          success: false,
+          code: HttpStatus.BAD_REQUEST,
+          message: 'Invalid complaint id',
+          error: err.name,
+        });
+      }
+
+      return res.status(err.code || HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
-        code: err.code,
+        code: err.code || HttpStatus.INTERNAL_SERVER_ERROR,
         message: err.message,
-        error: err.error,
+        error: err.name || err.error,
       });
     }
   }
