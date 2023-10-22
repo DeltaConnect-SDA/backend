@@ -16,7 +16,7 @@ import {
 } from '@nestjs/common';
 import { ComplaintService } from './complaint.service';
 import { ComplaintDTO } from './dto';
-import { GetUser } from 'src/auth/decorator';
+import { GetUser, Roles } from 'src/auth/decorator';
 import { Request, Response } from 'express';
 import { JwtGuard } from 'src/auth/guard';
 import { FilesInterceptor } from '@nestjs/platform-express';
@@ -25,6 +25,8 @@ import {
   PrismaClientKnownRequestError,
   PrismaClientValidationError,
 } from '@prisma/client/runtime/library';
+import { RolesGuard } from 'src/auth/guard/roles.guard';
+import { Role } from 'src/auth/enum/role.enum';
 
 @Controller({ version: '1' })
 export class ComplaintController {
@@ -40,7 +42,8 @@ export class ComplaintController {
    * @returns Complaint data
    */
   @UseInterceptors(FilesInterceptor('images'))
-  @UseGuards(JwtGuard)
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(Role.PUBLIC)
   @Post('complaints')
   async store(
     @UploadedFiles() images: Express.Multer.File[],

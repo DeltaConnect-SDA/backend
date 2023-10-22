@@ -3,12 +3,16 @@ import { Response } from 'express';
 import { AnalyticsService } from './analytics.service';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { JwtGuard } from 'src/auth/guard';
+import { Roles } from 'src/auth/decorator';
+import { Role } from 'src/auth/enum/role.enum';
+import { RolesGuard } from 'src/auth/guard/roles.guard';
 
-@UseGuards(JwtGuard)
+@UseGuards(JwtGuard, RolesGuard)
 @Controller({ path: 'analytics', version: '1' })
 export class AnalyticsController {
   constructor(private analyticsService: AnalyticsService) {}
 
+  @Roles(Role.AUTHORIZER, Role.SUPER_ADMIN, Role.TECHNICAL_EXECUTOR)
   @Get('complaints')
   async complaintAnalytics(@Res() res: Response) {
     try {
@@ -49,6 +53,7 @@ export class AnalyticsController {
     }
   }
 
+  @Roles(Role.AUTHORIZER, Role.SUPER_ADMIN, Role.TECHNICAL_EXECUTOR)
   @Get('kpi')
   async dashboardComplaintAnalytics(@Res() res: Response) {
     try {
