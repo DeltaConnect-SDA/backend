@@ -155,7 +155,7 @@ export class ComplaintService {
         ComplaintImages: { select: { path: true, placeholder: true } },
         category: { select: { title: true, id: true } },
         priority: { select: { title: true, id: true, color: true } },
-        status: { select: { title: true, color: true } },
+        status: { select: { id: true, title: true, color: true } },
         user: { select: { id: true } },
         ComplaintSaved: {
           where: { userId },

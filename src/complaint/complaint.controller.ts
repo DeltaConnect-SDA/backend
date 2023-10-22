@@ -443,7 +443,7 @@ export class ComplaintController {
 
   @UseGuards(JwtGuard)
   @Patch('complaints/:id/cancel')
-  async cacleComplaint(
+  async cancleComplaint(
     @Param('id') id: string,
     @GetUser() user: any,
     @Res() res: Response,
