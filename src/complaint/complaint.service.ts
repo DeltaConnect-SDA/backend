@@ -1,6 +1,11 @@
-import { Injectable, HttpStatus, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  HttpStatus,
+  Logger,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { ComplaintDTO } from './dto';
+import { ComplaintDTO, ComplaintRatingDTO } from './dto';
 import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
 import { Role } from 'src/auth/enum/role.enum';
@@ -68,6 +73,13 @@ export class ComplaintService {
               ...data,
               userId,
               ref_id: refId,
+              ComplaintActivity: {
+                create: {
+                  title: 'Menunggu',
+                  descripiton: 'Laporan anda menunggu respon petugas.',
+                  statusId: 1,
+                },
+              },
             },
           });
         },
@@ -156,10 +168,13 @@ export class ComplaintService {
         category: { select: { title: true, id: true } },
         priority: { select: { title: true, id: true, color: true } },
         status: { select: { id: true, title: true, color: true } },
-        user: { select: { id: true } },
+        user: { select: { id: true, firstName: true, LastName: true } },
         ComplaintSaved: {
           where: { userId },
           select: { id: true },
+        },
+        ComplaintFeedBack: {
+          where: { userId },
         },
       },
     });
@@ -400,6 +415,58 @@ export class ComplaintService {
       });
     } catch (err) {
       throw err;
+    }
+  }
+
+  async rating(data: ComplaintRatingDTO, userId: string, complaintId: number) {
+    const rated = await this.prismaService.complaintFeedBack.findFirst({
+      where: { complaintId, userId },
+    });
+
+    if (rated) {
+      throw new ForbiddenException();
+    }
+
+    try {
+      const complaintRate = await this.prismaService.$transaction(
+        async (prisma) => {
+          const rating = await prisma.complaintFeedBack.create({
+            data: {
+              complaintId,
+              userId,
+              feedackScore: data.rate,
+              feedbackNote: data.rateText,
+            },
+            select: {
+              complaintId: true,
+              complaint: {
+                select: { total_feedback: true, total_score: true },
+              },
+            },
+          });
+
+          let totalScore;
+
+          if (rating.complaint.total_feedback) {
+            totalScore = (rating.complaint.total_score + data.rate) / 2;
+          } else {
+            totalScore = data.rate;
+          }
+          console.log(Math.round((totalScore + Number.EPSILON) * 10) / 10);
+          return await prisma.complaint.update({
+            where: { id: rating.complaintId },
+            data: {
+              total_feedback: rating.complaint.total_feedback + 1,
+              total_score: Math.round((totalScore + Number.EPSILON) * 10) / 10,
+            },
+          });
+        },
+      );
+      return complaintRate;
+    } catch (err) {
+      throw err;
+    } finally {
+      this.prismaService.$disconnect();
     }
   }
 }

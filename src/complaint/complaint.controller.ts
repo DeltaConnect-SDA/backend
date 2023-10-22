@@ -15,7 +15,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ComplaintService } from './complaint.service';
-import { ComplaintDTO } from './dto';
+import { ComplaintDTO, ComplaintRatingDTO } from './dto';
 import { GetUser, Roles } from 'src/auth/decorator';
 import { Request, Response } from 'express';
 import { JwtGuard } from 'src/auth/guard';
@@ -112,7 +112,8 @@ export class ComplaintController {
    * @param res Response
    * @returns Complaints by user
    */
-  @UseGuards(JwtGuard)
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(Role.PUBLIC)
   @Get('user/complaints')
   async getByUser(@GetUser('id') userId: string, @Res() res: Response) {
     try {
@@ -139,7 +140,8 @@ export class ComplaintController {
    * @param res Response
    * @returns Saved complaints by user
    */
-  @UseGuards(JwtGuard)
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(Role.PUBLIC)
   @Get('complaints/saved')
   async userSavedComplaints(
     @GetUser('id') userId: string,
@@ -172,7 +174,8 @@ export class ComplaintController {
    * @param res Response
    * @returns Complaint
    */
-  @UseGuards(JwtGuard)
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(Role.PUBLIC)
   @Post('complaints/saved')
   async saveComplaint(
     @Body('complaintId') complaintId: number,
@@ -207,7 +210,8 @@ export class ComplaintController {
    * @param res Response
    * @returns Complaint
    */
-  @UseGuards(JwtGuard)
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(Role.PUBLIC)
   @Delete('complaints/saved/:id')
   async unSaveComplaint(
     @Param('id') complaintId: string,
@@ -412,7 +416,8 @@ export class ComplaintController {
    * @param userId User Id
    * @returns Complaint data
    */
-  @UseGuards(JwtGuard)
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(Role.PUBLIC)
   @Get('complaints/:id/auth')
   async showWhenAuthenticated(
     @Param('id') id: string,
@@ -476,9 +481,54 @@ export class ComplaintController {
     return [user, data];
   }
 
-  @UseGuards(JwtGuard)
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(Role.PUBLIC)
   @Post('complaints/:id/rating')
-  async ratingComplaint(@Body() data: any, @GetUser() user: any) {
-    return [user, data];
+  async ratingComplaint(
+    @Body() data: ComplaintRatingDTO,
+    @Param('id') complaintId: string,
+    @GetUser('id') id: string,
+    @Res() res: Response,
+  ) {
+    try {
+      const complaint = await this.complaintService.rating(
+        data,
+        id,
+        +complaintId,
+      );
+      return res.status(HttpStatus.CREATED).json({
+        success: true,
+        code: HttpStatus.OK,
+        message: 'Berhasil memberikan penilaian!',
+        data: complaint,
+      });
+    } catch (err) {
+      if (err instanceof PrismaClientKnownRequestError) {
+        switch (err.code) {
+          case 'P2025': {
+            res.status(HttpStatus.NOT_FOUND).json({
+              success: false,
+              code: HttpStatus.NOT_FOUND,
+              message: err.message,
+              error: err.name,
+            });
+          }
+          default: {
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+              success: false,
+              code: HttpStatus.INTERNAL_SERVER_ERROR,
+              message: err.message,
+              error: err.name,
+            });
+          }
+        }
+      }
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        code: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: err.message,
+        error: err.name || err.error,
+      });
+    }
   }
 }

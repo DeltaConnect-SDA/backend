@@ -21,12 +21,13 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  role           Role             @relation(fields: [roleId], references: [id])
-  roleId         String
-  UserDetail     UserDetail       @relation(fields: [userDetailId], references: [id], onDelete: Cascade)
-  userDetailId   String           @unique
-  Complaint      Complaint[]
-  ComplaintSaved ComplaintSaved[]
+  role              Role                @relation(fields: [roleId], references: [id])
+  roleId            String
+  UserDetail        UserDetail          @relation(fields: [userDetailId], references: [id], onDelete: Cascade)
+  userDetailId      String              @unique
+  Complaint         Complaint[]
+  ComplaintSaved    ComplaintSaved[]
+  ComplaintFeedBack ComplaintFeedBack[]
 }
 
 model UserDetail {
@@ -102,6 +103,7 @@ model Complaint {
   ComplaintActivity ComplaintActivity[]
   ComplaintImages   ComplaintImages[]
   ComplaintSaved    ComplaintSaved[]
+  ComplaintFeedBack ComplaintFeedBack[]
 }
 
 model ComplaintImages {
@@ -172,4 +174,18 @@ model Priority {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
   Complaint Complaint[]
+}
+
+model ComplaintFeedBack {
+  id          Int       @id @default(autoincrement())
+  complaint   Complaint @relation(fields: [complaintId], references: [id])
+  complaintId Int
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
+
+  feedbackNote String
+  feedackScore Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
