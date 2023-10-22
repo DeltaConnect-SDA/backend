@@ -75,6 +75,50 @@ export class AuthController {
     }
   }
 
+  @Get('dashboard/logout')
+  async logout(@Res() res: Response) {
+    return res
+      .status(HttpStatus.OK)
+      .clearCookie('access_token', {
+        httpOnly: true,
+        sameSite: 'none',
+        secure: true,
+      })
+      .json({
+        success: true,
+        code: HttpStatus.OK,
+        message: 'Pengguna berhasil masuk!',
+      });
+  }
+
+  @Post('dashboard/login')
+  async loginDashboard(@Body() data: LoginDTO, @Res() res: Response) {
+    try {
+      const user = await this.authService.signInDashboard(data);
+
+      return res
+        .status(HttpStatus.OK)
+        .cookie('access_token', user[1]['access_token'], {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'none',
+        })
+        .json({
+          success: true,
+          code: HttpStatus.OK,
+          message: 'Pengguna berhasil masuk!',
+          data: user,
+        });
+    } catch (err) {
+      return res.status(err.code).json({
+        success: false,
+        code: err.code,
+        message: err.message,
+        error: err.error,
+      });
+    }
+  }
+
   @UseGuards(JwtGuard)
   @Get('profile')
   async profile(@GetUser() user: User) {

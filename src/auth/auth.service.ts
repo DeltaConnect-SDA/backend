@@ -128,6 +128,7 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({
       where: {
         email: data.email,
+        role: { type: Role.PUBLIC },
       },
       select: {
         id: true,
@@ -138,6 +139,52 @@ export class AuthService {
         password: true,
         UserDetail: {
           select: { isEmailVerified: true, isPhoneVerified: true },
+        },
+      },
+    });
+
+    if (!user) {
+      throw {
+        message: 'Pengguna tidak ditumukan!',
+        code: HttpStatus.NOT_FOUND,
+        error: 'User not found',
+      };
+    }
+    const pwMatches = await argon.verify(user.password, data.password);
+
+    if (!pwMatches) {
+      throw {
+        message: 'Email atau password salah!',
+        code: HttpStatus.BAD_REQUEST,
+        error: 'Invalid password',
+      };
+    }
+
+    delete user.password;
+
+    const token = await this.signToken(user.id, user.email);
+
+    return [{ user }, token];
+  }
+
+  async signInDashboard(data: LoginDTO) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        email: data.email,
+        NOT: { role: { type: Role.PUBLIC } },
+      },
+      select: {
+        id: true,
+        email: true,
+        phone: true,
+        firstName: true,
+        LastName: true,
+        password: true,
+        role: {
+          select: {
+            type: true,
+            name: true,
+          },
         },
       },
     });

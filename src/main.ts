@@ -1,9 +1,15 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { BadRequestException, ValidationPipe, VersioningType } from '@nestjs/common';
+import {
+  BadRequestException,
+  Logger,
+  ValidationPipe,
+  VersioningType,
+} from '@nestjs/common';
 import * as compression from 'compression';
 import { ConfigService } from '@nestjs/config';
 import { ValidationError, useContainer } from 'class-validator';
+import * as cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -18,17 +24,26 @@ async function bootstrap() {
           validationErrors.map((error) => ({
             field: error.property,
             error: Object.values(error.constraints),
-          }))
+          })),
         );
       },
-    })
+    }),
   );
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
-  app.enableCors({ origin: '*' });
+  app.enableCors({
+    origin: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+    preflightContinue: false,
+    allowedHeaders: 'Content-Type, Accept',
+  });
+  app.use(cookieParser());
   app.enableVersioning({
     type: VersioningType.URI,
   });
   app.use(compression());
-  await app.listen(configService.get('PORT'));
+  const PORT = configService.get('PORT') || 80;
+  await app.listen(PORT);
+  Logger.log(`Listening on http://localhost:${PORT}`);
 }
 bootstrap();

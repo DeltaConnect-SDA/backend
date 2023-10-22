@@ -254,8 +254,6 @@ export class ComplaintController {
             });
           }
           default: {
-            console.log(err);
-
             res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
               success: false,
               code: HttpStatus.INTERNAL_SERVER_ERROR,

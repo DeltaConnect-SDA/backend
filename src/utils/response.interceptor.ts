@@ -9,7 +9,7 @@ import { map } from 'rxjs/operators';
 
 export interface Response<T> {
   success: boolean;
-  code: number;
+  code?: number;
   message: string;
   data: T;
 }
@@ -23,7 +23,7 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, Response<T>> {
     return next.handle().pipe(
       map((data) => ({
         success: data.success,
-        code: data.code,
+        code: data?.code,
         message: data.message,
         data: data.data,
       })),
