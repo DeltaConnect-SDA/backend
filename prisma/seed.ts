@@ -67,6 +67,10 @@ async function main() {
         title: 'Dibatalkan',
         color: 'RED',
       },
+      {
+        title: 'Ditolak',
+        color: 'RED',
+      },
     ],
   });
 
