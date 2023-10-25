@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { Role } from 'src/auth/enum/role.enum';
+import { Status } from 'src/enum';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
@@ -30,6 +31,8 @@ export class AnalyticsService {
         },
       };
     }
+    console.log(where, 'where');
+
     try {
       const rawData = await this.prismaService.complaintActivity.groupBy({
         by: ['createdAt', 'statusId'],
@@ -69,10 +72,11 @@ export class AnalyticsService {
           timeZone: 'UTC',
         });
 
-        if (data.statusId === 4) {
+        if (data.statusId === Status.COMPLETE) {
           analytics[formattedDate].Selesai += data._count._all;
+        } else if (data.statusId === Status.WAITING) {
+          analytics[formattedDate].Baru += data._count._all;
         }
-        analytics[formattedDate].Baru += data._count._all;
       });
 
       return Object.values(analytics);
