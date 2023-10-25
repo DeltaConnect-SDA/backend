@@ -13,6 +13,7 @@ import {
   Req,
   Patch,
   Query,
+  Logger,
 } from '@nestjs/common';
 import { ComplaintService } from './complaint.service';
 import { ComplaintDTO, ComplaintRatingDTO } from './dto';
@@ -80,14 +81,104 @@ export class ComplaintController {
   }
 
   /**
+   * Get complaints
+   * @param res Response
+   * @returns Complaints
+   */
+  @Get('complaints')
+  async getComplaints(
+    @Query('page') page: number = 1,
+    @Query('perPage') perPage: number = 10,
+    @Query('orderByDate') orderByDate: 'asc' | 'desc' = 'desc',
+    @Res() res: Response,
+  ) {
+    try {
+      const complaints = await this.complaintService.get(
+        page,
+        perPage,
+        orderByDate,
+      );
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        code: HttpStatus.OK,
+        message: 'Berhasil mengambil data laporan!',
+        data: complaints,
+      });
+    } catch (err) {
+      return res.status(err.code).json({
+        success: false,
+        code: err.code,
+        message: err.message,
+        error: err.error,
+      });
+    }
+  }
+
+  /**
+   * Get complaints
+   * @param res Response
+   * @returns Complaints
+   */
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(Role.AUTHORIZER, Role.SUPER_ADMIN, Role.TECHNICAL_EXECUTOR)
+  @Get('complaints/dashboard')
+  async dashboardComplaints(
+    @Query('page') page: number = 1,
+    @Query('perPage') perPage: number = 10,
+    @Query('orderByDate') orderByDate: 'asc' | 'desc' = 'desc',
+    @GetUser() user: any,
+    @Res() res: Response,
+  ) {
+    try {
+      const complaints = await this.complaintService.get(
+        page,
+        perPage,
+        orderByDate,
+        user,
+      );
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        code: HttpStatus.OK,
+        message: 'Berhasil mengambil data laporan!',
+        data: complaints,
+      });
+    } catch (err) {
+      if (err instanceof PrismaClientKnownRequestError) {
+        switch (err.code) {
+          case 'P2025': {
+            res.status(HttpStatus.NOT_FOUND).json({
+              success: false,
+              code: HttpStatus.NOT_FOUND,
+              message: err.message,
+              error: err.name,
+            });
+          }
+          default: {
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+              success: false,
+              code: HttpStatus.INTERNAL_SERVER_ERROR,
+              message: err.message,
+              error: err.name || err.stack,
+            });
+          }
+        }
+      }
+      Logger.error(err);
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        code: HttpStatus.INTERNAL_SERVER_ERROR,
+        error: err.name || err.error,
+      });
+    }
+  }
+
+  /**
    * Get latest complaints
    * @param res Response
    * @returns Latest Complaints
    */
   @Get('complaints/latest')
   async getLatest(@Res() res: Response) {
-    console.log('req');
-
     try {
       const complaints = await this.complaintService.findLatest();
       return res.status(HttpStatus.OK).json({
@@ -291,16 +382,138 @@ export class ComplaintController {
 
   @Get('complaints/search')
   async searchComplaints(
-    @Query('query') query: string,
-    @Query('statusId') statusId: string,
-    @Query('orderByDate') orderByDate: 'asc' | 'desc',
+    @Query('query') query: string = '',
+    @Query('status') statusId: string = null,
+    @Query('category') categoryId: string = null,
+    @Query('priority') priorityId: string = null,
+    @Query('page') page: number = 1,
+    @Query('perPage') perPage: number = 10,
+    @Query('orderByDate') orderByDate: 'asc' | 'desc' = 'desc',
     @Res() res: Response,
   ) {
     try {
+      let categories;
+      let statuses;
+      let priorities;
+      if (categoryId) {
+        categories = categoryId.split(',').map(Number);
+      } else {
+        categories = null;
+      }
+
+      if (statusId) {
+        statuses = statusId.split(',').map(Number);
+      } else {
+        statuses = null;
+      }
+
+      if (priorityId) {
+        priorities = priorityId.split(',').map(Number);
+      } else {
+        priorities = null;
+      }
+
       const complaint = await this.complaintService.searchComplaints(
         query,
-        parseInt(statusId, 10),
+        statuses,
+        categories,
+        priorities,
         orderByDate,
+        page,
+        perPage,
+      );
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        code: HttpStatus.OK,
+        message: 'Berhasil mencari laporan!',
+        data: complaint,
+      });
+    } catch (err) {
+      if (err instanceof PrismaClientKnownRequestError) {
+        switch (err.code) {
+          case 'P2025': {
+            res.status(HttpStatus.NOT_FOUND).json({
+              success: false,
+              code: HttpStatus.NOT_FOUND,
+              message: err.message,
+              error: err.name,
+            });
+          }
+          default: {
+            console.log(err);
+
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+              success: false,
+              code: HttpStatus.INTERNAL_SERVER_ERROR,
+              message: err.message,
+              error: err.name,
+            });
+          }
+        }
+      }
+
+      if (err instanceof PrismaClientValidationError) {
+        return res.status(HttpStatus.BAD_REQUEST).json({
+          success: false,
+          code: HttpStatus.BAD_REQUEST,
+          message: 'Invalid request params',
+          error: err.name,
+        });
+      }
+
+      return res.status(err.code || HttpStatus.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        code: err.code || HttpStatus.INTERNAL_SERVER_ERROR,
+        message: err.message,
+        error: err.name || err.error,
+      });
+    }
+  }
+
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(Role.AUTHORIZER, Role.SUPER_ADMIN, Role.TECHNICAL_EXECUTOR)
+  @Get('complaints/search/dashboard')
+  async searchComplaintsDashboard(
+    @Query('query') query: string = '',
+    @Query('status') statusId: string = null,
+    @Query('category') categoryId: string = null,
+    @Query('priority') priorityId: string = null,
+    @Query('page') page: number = 1,
+    @Query('perPage') perPage: number = 10,
+    @Query('orderByDate') orderByDate: 'asc' | 'desc' = 'desc',
+    @GetUser() user: any,
+    @Res() res: Response,
+  ) {
+    try {
+      let categories;
+      let statuses;
+      let priorities;
+      if (categoryId) {
+        categories = categoryId.split(',').map(Number);
+      } else {
+        categories = null;
+      }
+
+      if (statusId) {
+        statuses = statusId.split(',').map(Number);
+      } else {
+        statuses = null;
+      }
+
+      if (priorityId) {
+        priorities = priorityId.split(',').map(Number);
+      } else {
+        priorities = null;
+      }
+      const complaint = await this.complaintService.searchComplaints(
+        query,
+        statuses,
+        categories,
+        priorities,
+        orderByDate,
+        page,
+        perPage,
+        user,
       );
       return res.status(HttpStatus.OK).json({
         success: true,

@@ -11,6 +11,7 @@ import { InjectQueue } from '@nestjs/bull';
 import { Role } from 'src/auth/enum/role.enum';
 import { Status } from 'src/enum';
 import { Prisma } from '@prisma/client';
+import { createPaginator } from 'prisma-pagination';
 
 @Injectable()
 export class ComplaintService {
@@ -135,6 +136,42 @@ export class ComplaintService {
     return complaints;
   }
 
+  async get(
+    page: number,
+    perPage: number,
+    orderByDate: 'asc' | 'desc',
+    user?: any,
+  ) {
+    const paginate = createPaginator({ perPage });
+    let queryParams: Prisma.ComplaintFindManyArgs = {
+      include: {
+        ComplaintImages: { select: { path: true, placeholder: true } },
+        category: { select: { title: true, id: true } },
+        priority: { select: { title: true, id: true, color: true } },
+        status: { select: { title: true, id: true, color: true } },
+        ComplaintSaved: { select: { userId: true } },
+      },
+      orderBy: { createdAt: orderByDate },
+    };
+
+    if (user && user.role.type === Role.TECHNICAL_EXECUTOR) {
+      queryParams = {
+        ...queryParams,
+        where: {
+          assignTo: {
+            type: Role.TECHNICAL_EXECUTOR,
+          },
+        },
+      };
+    }
+
+    try {
+      return paginate(this.prismaService.complaint, queryParams, { page });
+    } catch (err) {
+      throw err;
+    }
+  }
+
   async findById(id: number) {
     try {
       const complaints = await this.prismaService.complaint.findUnique({
@@ -143,7 +180,9 @@ export class ComplaintService {
           ComplaintImages: { select: { path: true, placeholder: true } },
           category: { select: { title: true, id: true } },
           priority: { select: { title: true, id: true, color: true } },
-          status: { select: { title: true, color: true } },
+          status: { select: { id: true, title: true, color: true } },
+          ComplaintFeedBack: true,
+          user: { select: { id: true, firstName: true, LastName: true } },
         },
       });
 
@@ -173,9 +212,10 @@ export class ComplaintService {
           where: { userId },
           select: { id: true },
         },
-        ComplaintFeedBack: {
-          where: { userId },
-        },
+        ComplaintFeedBack: true,
+        // ComplaintFeedBack: {
+        //   where: { userId },
+        // },
       },
     });
 
@@ -358,41 +398,70 @@ export class ComplaintService {
 
   async searchComplaints(
     query: string,
-    statusId: number,
+    statusId: number[] = null,
+    categories: number[] = null,
+    priorityId: number[] = null,
     orderByDate: 'asc' | 'desc',
+    page: number,
+    perPage: number,
+    user?: any,
   ) {
-    const where: Prisma.ComplaintWhereInput = {
-      OR: [
-        {
-          title: {
-            contains: query,
-            mode: 'insensitive',
+    const paginate = createPaginator({ perPage });
+    const queryParams: Prisma.ComplaintFindManyArgs = {
+      include: {
+        ComplaintImages: { select: { path: true, placeholder: true } },
+        category: { select: { id: true, title: true } },
+        priority: { select: { id: true, title: true, color: true } },
+        status: { select: { id: true, title: true, color: true } },
+      },
+      orderBy: { createdAt: orderByDate },
+      where: {
+        OR: [
+          {
+            title: {
+              contains: query,
+              mode: 'insensitive',
+            },
           },
-        },
-        {
-          ref_id: {
-            equals: query,
+          {
+            ref_id: {
+              equals: query,
+            },
           },
-        },
-      ],
-      statusId,
+        ],
+      },
     };
 
-    const orderBy: Prisma.ComplaintOrderByWithRelationInput = {
-      createdAt: orderByDate,
-    };
+    if (orderByDate) {
+      queryParams.orderBy = { createdAt: orderByDate };
+    } else {
+      queryParams.orderBy = { createdAt: 'desc' };
+    }
+
+    if (categories) {
+      queryParams.where.categoryId = {
+        in: categories,
+      };
+    }
+
+    if (statusId) {
+      queryParams.where.statusId = {
+        in: statusId,
+      };
+    }
+
+    if (priorityId) {
+      queryParams.where.priorityId = {
+        in: priorityId,
+      };
+    }
+
+    if (user && user.role.type === Role.TECHNICAL_EXECUTOR) {
+      queryParams.where.assignTo.type = Role.TECHNICAL_EXECUTOR;
+    }
 
     try {
-      return await this.prismaService.complaint.findMany({
-        where,
-        orderBy,
-        include: {
-          ComplaintImages: { select: { path: true, placeholder: true } },
-          category: { select: { title: true, id: true } },
-          priority: { select: { title: true, id: true, color: true } },
-          status: { select: { title: true, color: true } },
-        },
-      });
+      return paginate(this.prismaService.complaint, queryParams, { page });
     } catch (err) {
       throw err;
     }
@@ -452,7 +521,6 @@ export class ComplaintService {
           } else {
             totalScore = data.rate;
           }
-          console.log(Math.round((totalScore + Number.EPSILON) * 10) / 10);
           return await prisma.complaint.update({
             where: { id: rating.complaintId },
             data: {

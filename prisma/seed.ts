@@ -1,4 +1,6 @@
+import { Logger } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import * as argon from 'argon2';
 
 const prisma = new PrismaClient();
 
@@ -118,6 +120,29 @@ async function main() {
       },
     ],
   });
+
+  const plainPassword = Math.random().toString(36).slice(2, 22);
+  const password = await argon.hash(plainPassword);
+  const { id } = await prisma.role.findFirst({
+    where: { type: { equals: 'super-admin' } },
+    select: { id: true },
+  });
+
+  await prisma.user.create({
+    data: {
+      email: 'deltaconnect@sidoarjokab.go.id',
+      firstName: 'Biro',
+      LastName: 'Pemerintah',
+      phone: '62812345678',
+      password,
+      role: { connect: { id } },
+      UserDetail: {
+        create: {},
+      },
+    },
+  });
+
+  Logger.log(plainPassword);
 }
 
 main()

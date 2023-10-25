@@ -68,7 +68,7 @@ export class AuthService {
         data: {
           firstName: data.firstName,
           LastName: data.lastName,
-          email: data.email,
+          email: data.email.toLowerCase(),
           phone: data.phone,
           password,
           role: {

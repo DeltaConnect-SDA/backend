@@ -5,7 +5,7 @@ import { Cache } from 'cache-manager';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 @Controller({
-  path: 'priority',
+  path: 'priorities',
   version: '1',
 })
 export class PriorityController {

@@ -1,16 +1,13 @@
 import { Controller, Get, HttpStatus, Inject, Res } from '@nestjs/common';
-import { CategoryService } from './category.service';
-import { Response } from 'express';
+import { StatusService } from './status.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
+import { Response } from 'express';
 
-@Controller({
-  path: 'categories',
-  version: '1',
-})
-export class CategoryController {
+@Controller({ path: 'statuses', version: '1' })
+export class StatusController {
   constructor(
-    private categoryService: CategoryService,
+    private statusService: StatusService,
     @Inject(CACHE_MANAGER) private cacheService: Cache,
   ) {}
 
@@ -18,17 +15,17 @@ export class CategoryController {
   async get(@Res() res: Response) {
     try {
       let data;
-      const cachedData = await this.cacheService.get('categories');
+      const cachedData = await this.cacheService.get('statuses');
       if (cachedData) {
         data = cachedData;
       } else {
-        data = await this.categoryService.getAllCatgories();
-        await this.cacheService.set('categories', data);
+        data = await this.statusService.getAllStatuses();
+        await this.cacheService.set('statuses', data);
       }
       return res.status(HttpStatus.OK).json({
         success: true,
         code: HttpStatus.OK,
-        message: 'Berhasil mengambil data kategori',
+        message: 'Berhasil mengambil data status',
         data: data,
       });
     } catch (err) {
