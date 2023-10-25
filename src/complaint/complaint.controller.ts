@@ -16,7 +16,12 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ComplaintService } from './complaint.service';
-import { ComplaintDTO, ComplaintRatingDTO, DeclineComplaintDTO } from './dto';
+import {
+  AssignComplaintDTO,
+  ComplaintDTO,
+  ComplaintRatingDTO,
+  DeclineComplaintDTO,
+} from './dto';
 import { GetUser, Roles } from 'src/auth/decorator';
 import { Request, Response } from 'express';
 import { JwtGuard } from 'src/auth/guard';
@@ -804,6 +809,55 @@ export class ComplaintController {
         success: true,
         code: HttpStatus.OK,
         message: 'Laporan berhasil diselesaikan!',
+        data: response,
+      });
+    } catch (err) {
+      if (err instanceof PrismaClientKnownRequestError) {
+        switch (err.code) {
+          case 'P2025': {
+            res.status(HttpStatus.NOT_FOUND).json({
+              success: false,
+              code: HttpStatus.NOT_FOUND,
+              message: err.message,
+              error: err.name,
+            });
+          }
+          default: {
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+              success: false,
+              code: HttpStatus.INTERNAL_SERVER_ERROR,
+              message: err.message,
+              error: err.name,
+            });
+          }
+        }
+      }
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        code: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: err.message,
+        error: err.name || err.error,
+      });
+    }
+  }
+
+  @UseInterceptors(FilesInterceptor('images'))
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(Role.AUTHORIZER, Role.SUPER_ADMIN, Role.TECHNICAL_EXECUTOR)
+  @Patch('complaints/assign')
+  async completeAssign(
+    @UploadedFiles() images: Express.Multer.File[] = null,
+    @Body() data: AssignComplaintDTO,
+    @GetUser() user: any,
+    @Res() res: Response,
+  ) {
+    try {
+      const response = await this.complaintService.assign(data, user, images);
+
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        code: HttpStatus.OK,
+        message: 'Laporan berhasil diteruskan!',
         data: response,
       });
     } catch (err) {
