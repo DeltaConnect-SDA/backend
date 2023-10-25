@@ -31,7 +31,6 @@ export class AnalyticsService {
         },
       };
     }
-    console.log(where, 'where');
 
     try {
       const rawData = await this.prismaService.complaintActivity.groupBy({
@@ -69,7 +68,7 @@ export class AnalyticsService {
         const formattedDate = date.toLocaleDateString('id-ID', {
           month: 'long',
           day: 'numeric',
-          timeZone: 'UTC',
+          timeZone: 'Asia/Jakarta',
         });
 
         if (data.statusId === Status.COMPLETE) {
