@@ -3,7 +3,7 @@ import { Response } from 'express';
 import { AnalyticsService } from './analytics.service';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { JwtGuard } from 'src/auth/guard';
-import { Roles } from 'src/auth/decorator';
+import { GetUser, Roles } from 'src/auth/decorator';
 import { Role } from 'src/auth/enum/role.enum';
 import { RolesGuard } from 'src/auth/guard/roles.guard';
 
@@ -14,9 +14,9 @@ export class AnalyticsController {
 
   @Roles(Role.AUTHORIZER, Role.SUPER_ADMIN, Role.TECHNICAL_EXECUTOR)
   @Get('complaints')
-  async complaintAnalytics(@Res() res: Response) {
+  async complaintAnalytics(@GetUser() user: any, @Res() res: Response) {
     try {
-      const complaint = await this.analyticsService.complaints();
+      const complaint = await this.analyticsService.complaints(user);
       return res.status(HttpStatus.OK).json({
         success: true,
         code: HttpStatus.OK,
@@ -55,9 +55,12 @@ export class AnalyticsController {
 
   @Roles(Role.AUTHORIZER, Role.SUPER_ADMIN, Role.TECHNICAL_EXECUTOR)
   @Get('kpi')
-  async dashboardComplaintAnalytics(@Res() res: Response) {
+  async dashboardComplaintAnalytics(
+    @GetUser() user: any,
+    @Res() res: Response,
+  ) {
     try {
-      const complaint = await this.analyticsService.complaintsDashboard();
+      const complaint = await this.analyticsService.complaintsDashboard(user);
       return res.status(HttpStatus.OK).json({
         success: true,
         code: HttpStatus.OK,

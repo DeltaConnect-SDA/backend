@@ -1,26 +1,39 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { Role } from 'src/auth/enum/role.enum';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class AnalyticsService {
   constructor(private prismaService: PrismaService) {}
 
-  async complaints() {
+  async complaints(user: any) {
     const startDate = new Date();
     startDate.setDate(1); // set to the start of the month
     startDate.setHours(0, 0, 0, 0);
 
     const endDate = new Date(startDate);
     endDate.setMonth(endDate.getMonth() + 1); // set to the start of the next month
-    try {
-      const rawData = await this.prismaService.complaint.groupBy({
-        by: ['createdAt', 'statusId'],
-        where: {
-          createdAt: {
-            gte: startDate,
-            lt: endDate,
+    let where: Prisma.ComplaintActivityWhereInput = {
+      createdAt: {
+        gte: startDate,
+        lt: endDate,
+      },
+    };
+    if (user && user.role.type === Role.TECHNICAL_EXECUTOR) {
+      where = {
+        ...where,
+        complaint: {
+          assignTo: {
+            type: Role.TECHNICAL_EXECUTOR,
           },
         },
+      };
+    }
+    try {
+      const rawData = await this.prismaService.complaintActivity.groupBy({
+        by: ['createdAt', 'statusId'],
+        where,
         _count: {
           _all: true,
         },
@@ -43,7 +56,7 @@ export class AnalyticsService {
         analytics[formattedDate] = {
           date: formattedDate,
           Selesai: 0,
-          Total: 0,
+          Baru: 0,
         };
       }
 
@@ -59,7 +72,7 @@ export class AnalyticsService {
         if (data.statusId === 4) {
           analytics[formattedDate].Selesai += data._count._all;
         }
-        analytics[formattedDate].Total += data._count._all;
+        analytics[formattedDate].Baru += data._count._all;
       });
 
       return Object.values(analytics);
@@ -68,7 +81,7 @@ export class AnalyticsService {
     }
   }
 
-  async complaintsDashboard() {
+  async complaintsDashboard(user: any) {
     const startDate = new Date();
     startDate.setDate(1); // set to the start of the month
     startDate.setHours(0, 0, 0, 0);
@@ -83,26 +96,55 @@ export class AnalyticsService {
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     try {
+      let complaintInMonthWhere: Prisma.ComplaintWhereInput = {
+        createdAt: {
+          gte: startDate,
+          lt: endDate,
+        },
+      };
+      if (user && user.role.type === Role.TECHNICAL_EXECUTOR) {
+        complaintInMonthWhere = {
+          ...complaintInMonthWhere,
+          assignTo: {
+            type: Role.TECHNICAL_EXECUTOR,
+          },
+        };
+      }
       const complaintInMonth = await this.prismaService.complaint.count({
-        where: {
-          createdAt: {
-            gte: startDate,
-            lt: endDate,
-          },
-        },
+        where: complaintInMonthWhere,
       });
 
+      let complaintInDayWhere: Prisma.ComplaintWhereInput = {
+        createdAt: {
+          gte: today,
+          lt: tomorrow,
+        },
+      };
+      if (user && user.role.type === Role.TECHNICAL_EXECUTOR) {
+        complaintInDayWhere = {
+          ...complaintInDayWhere,
+          assignTo: {
+            type: Role.TECHNICAL_EXECUTOR,
+          },
+        };
+      }
       const complaintInDay = await this.prismaService.complaint.count({
-        where: {
-          createdAt: {
-            gte: today,
-            lt: tomorrow,
-          },
-        },
+        where: complaintInDayWhere,
       });
 
+      let complaintWaitingWhere: Prisma.ComplaintWhereInput = {
+        statusId: 1,
+      };
+      if (user && user.role.type === Role.TECHNICAL_EXECUTOR) {
+        complaintWaitingWhere = {
+          ...complaintWaitingWhere,
+          assignTo: {
+            type: Role.TECHNICAL_EXECUTOR,
+          },
+        };
+      }
       const complaintWaiting = await this.prismaService.complaint.count({
-        where: { statusId: 1 },
+        where: complaintWaitingWhere,
       });
 
       const verificationRequests = 67;

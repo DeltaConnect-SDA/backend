@@ -19,6 +19,7 @@ import { BullModule } from '@nestjs/bull';
 import { ImageQueue } from './queue/image.queue';
 import { ImageService } from './image/image.service';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { StatusModule } from './status/status.module';
 
 @Module({
   imports: [
@@ -75,6 +76,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     ComplaintModule,
     ImageModule,
     AnalyticsModule,
+    StatusModule,
   ],
   providers: [WhatsappService, IsUniqueConstraint, ImageQueue, ImageService],
 })
