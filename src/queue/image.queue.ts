@@ -54,4 +54,38 @@ export class ImageQueue {
       throw new Error(err);
     }
   }
+
+  @Process('updateComplaintActivity')
+  async uploadComplaintActivityImages(
+    job: Job<{
+      activityId: number;
+      buffer: Buffer;
+      fileName: string;
+      size: number;
+      mimeType: string;
+    }>,
+  ) {
+    const { data } = job;
+    const { activityId, buffer, fileName, size, mimeType } = data;
+    const path = await this.imageService.upload(
+      buffer,
+      fileName,
+      Folder.COMPLAINT,
+      size,
+      mimeType,
+    );
+
+    log('storing images');
+    try {
+      log('creating placeholder');
+      const placeholder = await this.imageService.blurhash(buffer);
+      await this.prismaSerive.complaintActivityImages.create({
+        data: { complaintActivityId: activityId, path, placeholder },
+      });
+      log('images stored');
+    } catch (err) {
+      log(err);
+      throw new Error(err);
+    }
+  }
 }

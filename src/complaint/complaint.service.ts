@@ -534,16 +534,20 @@ export class ComplaintService {
     }
   }
 
-  async decline(data: DeclineComplaintDTO, user: any) {
+  async decline(
+    data: DeclineComplaintDTO,
+    user: any,
+    images?: Express.Multer.File[],
+  ) {
     try {
-      await this.prismaService.$transaction(async (prisma) => {
+      const activity = await this.prismaService.$transaction(async (prisma) => {
         await prisma.complaint.findUniqueOrThrow({
           where: {
             id: +data.id,
           },
         });
 
-        await prisma.complaintActivity.create({
+        const activity = await prisma.complaintActivity.create({
           data: {
             title: 'Ditolak',
             descripiton: `Laporan ditolak oleh ${user.role.name}`,
@@ -553,13 +557,91 @@ export class ComplaintService {
           },
         });
 
-        return await prisma.complaint.update({
+        await prisma.complaint.update({
           where: { id: +data.id },
           data: { statusId: Status.DECLINED },
         });
+
+        return activity;
       });
+      const activityId = activity.id;
+      const fileName = `${activity.complaintId}_${activity.title}_image`;
+
+      if (images) {
+        const jobs = images.map((image, index) => ({
+          name: 'updateComplaintActivity',
+          data: {
+            activityId,
+            buffer: image.buffer,
+            fileName: fileName + index + '.' + image.mimetype.split('/')[1],
+            size: image.size,
+            mimeType: image.mimetype,
+          },
+        }));
+        await this.complaintImageUpload.addBulk(jobs);
+      }
+      return activity;
     } catch (err) {
       Logger.error(err, 'Dashboard decline complaint');
+      throw {
+        message: err.message,
+        code: HttpStatus.INTERNAL_SERVER_ERROR,
+        error: 'There was an error processing your request.',
+      };
+    } finally {
+      this.prismaService.$disconnect;
+    }
+  }
+
+  async verify(
+    data: DeclineComplaintDTO,
+    user: any,
+    images?: Express.Multer.File[],
+  ) {
+    try {
+      const activity = await this.prismaService.$transaction(async (prisma) => {
+        await prisma.complaint.findUniqueOrThrow({
+          where: {
+            id: +data.id,
+          },
+        });
+
+        const activity = await prisma.complaintActivity.create({
+          data: {
+            title: 'Diverifikasi',
+            descripiton: `Laporan telah diverifikasi oleh ${user.role.name}`,
+            notes: data.notes,
+            statusId: Status.VERIFICATION,
+            complaintId: +data.id,
+          },
+        });
+
+        await prisma.complaint.update({
+          where: { id: +data.id },
+          data: { statusId: Status.VERIFICATION },
+        });
+
+        return activity;
+      });
+      const activityId = activity.id;
+      const fileName = `${activity.complaintId}_${activity.title}_image`;
+
+      if (images) {
+        const jobs = images.map((image, index) => ({
+          name: 'updateComplaintActivity',
+          data: {
+            activityId,
+            buffer: image.buffer,
+            fileName: fileName + index + '.' + image.mimetype.split('/')[1],
+            size: image.size,
+            mimeType: image.mimetype,
+          },
+        }));
+        await this.complaintImageUpload.addBulk(jobs);
+      }
+      return activity;
+    } catch (err) {
+      Logger.error(err, 'Dashboard verify complaint');
       throw {
         message: err.message,
         code: HttpStatus.INTERNAL_SERVER_ERROR,
