@@ -4,4 +4,5 @@ export enum Status {
   PROCESS = 3,
   COMPLETE = 4,
   CACELED = 5,
+  DECLINED = 6,
 }

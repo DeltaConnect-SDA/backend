@@ -16,7 +16,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ComplaintService } from './complaint.service';
-import { ComplaintDTO, ComplaintRatingDTO } from './dto';
+import { ComplaintDTO, ComplaintRatingDTO, DeclineComplaintDTO } from './dto';
 import { GetUser, Roles } from 'src/auth/decorator';
 import { Request, Response } from 'express';
 import { JwtGuard } from 'src/auth/guard';
@@ -659,7 +659,8 @@ export class ComplaintController {
     }
   }
 
-  @UseGuards(JwtGuard)
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(Role.PUBLIC)
   @Patch('complaints/:id/cancel')
   async cancleComplaint(
     @Param('id') id: string,
@@ -667,7 +668,7 @@ export class ComplaintController {
     @Res() res: Response,
   ) {
     try {
-      const complaint = await this.complaintService.updateComplaintStatus(
+      const complaint = await this.complaintService.cancel(
         parseInt(id, 10),
         user,
         Status.CACELED,
@@ -692,6 +693,53 @@ export class ComplaintController {
   @Patch('complaints/:id/done')
   async completeComplaint(@Body() data: any, @GetUser() user: any) {
     return [user, data];
+  }
+
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(Role.AUTHORIZER, Role.SUPER_ADMIN, Role.TECHNICAL_EXECUTOR)
+  @Patch('complaints/decline')
+  async declineComplaint(
+    @Body() data: DeclineComplaintDTO,
+    @GetUser() user: any,
+    @Res() res: Response,
+  ) {
+    try {
+      const response = await this.complaintService.decline(data, user);
+
+      return res.status(HttpStatus.NO_CONTENT).json({
+        success: true,
+        code: HttpStatus.NO_CONTENT,
+        message: 'Laporan berhasil dibatolak!',
+        data: response,
+      });
+    } catch (err) {
+      if (err instanceof PrismaClientKnownRequestError) {
+        switch (err.code) {
+          case 'P2025': {
+            res.status(HttpStatus.NOT_FOUND).json({
+              success: false,
+              code: HttpStatus.NOT_FOUND,
+              message: err.message,
+              error: err.name,
+            });
+          }
+          default: {
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+              success: false,
+              code: HttpStatus.INTERNAL_SERVER_ERROR,
+              message: err.message,
+              error: err.name,
+            });
+          }
+        }
+      }
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        code: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: err.message,
+        error: err.name || err.error,
+      });
+    }
   }
 
   @UseGuards(JwtGuard, RolesGuard)

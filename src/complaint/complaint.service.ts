@@ -5,7 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { ComplaintDTO, ComplaintRatingDTO } from './dto';
+import { ComplaintDTO, ComplaintRatingDTO, DeclineComplaintDTO } from './dto';
 import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
 import { Role } from 'src/auth/enum/role.enum';
@@ -277,6 +277,7 @@ export class ComplaintService {
       this.prismaService.$disconnect();
     }
   }
+
   async removeSavedComplaints(complaintId: number, userId: string) {
     try {
       const complaint = await this.prismaService.$transaction(
@@ -343,12 +344,7 @@ export class ComplaintService {
     return complaints;
   }
 
-  async updateComplaintStatus(
-    id: number,
-    user: any,
-    statusId: Status,
-    data?: any,
-  ) {
+  async cancel(id: number, user: any, statusId: Status, data?: any) {
     console.log(data);
     try {
       const complaint = await this.prismaService.$transaction(
@@ -535,6 +531,42 @@ export class ComplaintService {
       throw err;
     } finally {
       this.prismaService.$disconnect();
+    }
+  }
+
+  async decline(data: DeclineComplaintDTO, user: any) {
+    try {
+      await this.prismaService.$transaction(async (prisma) => {
+        await prisma.complaint.findUniqueOrThrow({
+          where: {
+            id: +data.id,
+          },
+        });
+
+        await prisma.complaintActivity.create({
+          data: {
+            title: 'Ditolak',
+            descripiton: `Laporan ditolak oleh ${user.role.name}`,
+            notes: data.notes,
+            statusId: Status.DECLINED,
+            complaintId: +data.id,
+          },
+        });
+
+        return await prisma.complaint.update({
+          where: { id: +data.id },
+          data: { statusId: Status.DECLINED },
+        });
+      });
+    } catch (err) {
+      Logger.error(err, 'Dashboard decline complaint');
+      throw {
+        message: err.message,
+        code: HttpStatus.INTERNAL_SERVER_ERROR,
+        error: 'There was an error processing your request.',
+      };
+    } finally {
+      this.prismaService.$disconnect;
     }
   }
 }
