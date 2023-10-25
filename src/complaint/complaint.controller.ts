@@ -890,6 +890,55 @@ export class ComplaintController {
     }
   }
 
+  @UseInterceptors(FilesInterceptor('images'))
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(Role.AUTHORIZER, Role.SUPER_ADMIN, Role.TECHNICAL_EXECUTOR)
+  @Patch('complaints/process')
+  async completeProcess(
+    @UploadedFiles() images: Express.Multer.File[] = null,
+    @Body() data: DeclineComplaintDTO,
+    @GetUser() user: any,
+    @Res() res: Response,
+  ) {
+    try {
+      const response = await this.complaintService.process(data, user, images);
+
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        code: HttpStatus.OK,
+        message: 'Laporan berhasil diproses!',
+        data: response,
+      });
+    } catch (err) {
+      if (err instanceof PrismaClientKnownRequestError) {
+        switch (err.code) {
+          case 'P2025': {
+            res.status(HttpStatus.NOT_FOUND).json({
+              success: false,
+              code: HttpStatus.NOT_FOUND,
+              message: err.message,
+              error: err.name,
+            });
+          }
+          default: {
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+              success: false,
+              code: HttpStatus.INTERNAL_SERVER_ERROR,
+              message: err.message,
+              error: err.name,
+            });
+          }
+        }
+      }
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        code: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: err.message,
+        error: err.name || err.error,
+      });
+    }
+  }
+
   @UseGuards(JwtGuard, RolesGuard)
   @Roles(Role.PUBLIC)
   @Post('complaints/:id/rating')
