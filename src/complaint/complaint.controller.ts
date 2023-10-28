@@ -558,7 +558,7 @@ export class ComplaintController {
           error: err.name,
         });
       }
-
+      Logger.error(err, 'Search Dashboard');
       return res.status(err.code || HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
         code: err.code || HttpStatus.INTERNAL_SERVER_ERROR,

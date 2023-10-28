@@ -47,6 +47,7 @@
     "class-validator": "^0.14.0",
     "compression": "^1.7.4",
     "cookie-parser": "^1.4.6",
+    "expo-server-sdk": "^3.7.0",
     "joi": "^17.11.0",
     "node-mailjet": "^6.0.4",
     "passport": "^0.6.0",

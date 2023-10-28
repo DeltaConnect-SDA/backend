@@ -17,11 +17,15 @@ import {
   ActivationDTO,
   VerifyPhoneDTO,
   LoginDTO,
+  DeviceDTO,
 } from './dto';
 import { Response } from 'express';
 import { JwtGuard } from './guard';
-import { GetUser } from './decorator';
+import { GetUser, Roles } from './decorator';
 import { User } from '@prisma/client';
+import { RolesGuard } from './guard/roles.guard';
+import { Role } from './enum/role.enum';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 @Controller({
   path: 'auth',
@@ -183,6 +187,49 @@ export class AuthController {
         code: err.code,
         message: err.message,
         error: err.error,
+      });
+    }
+  }
+
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(Role.PUBLIC)
+  @Post('device')
+  async storeDeviceToken(@Body() data: DeviceDTO, @Res() res: Response) {
+    try {
+      const response = await this.userService.addDevice(data);
+
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        code: HttpStatus.OK,
+        message: 'Device berhasil ditambahkan!',
+        data: response,
+      });
+    } catch (err) {
+      if (err instanceof PrismaClientKnownRequestError) {
+        switch (err.code) {
+          case 'P2025': {
+            res.status(HttpStatus.NOT_FOUND).json({
+              success: false,
+              code: HttpStatus.NOT_FOUND,
+              message: err.message,
+              error: err.name,
+            });
+          }
+          default: {
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+              success: false,
+              code: HttpStatus.INTERNAL_SERVER_ERROR,
+              message: err.message,
+              error: err.name,
+            });
+          }
+        }
+      }
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        code: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: err.message,
+        error: err.name || err.error,
       });
     }
   }

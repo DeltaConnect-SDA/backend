@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Role } from 'src/auth/enum/role.enum';
+import { DeviceDTO } from 'src/auth/dto';
 
 @Injectable()
 export class UserService {
@@ -49,6 +50,82 @@ export class UserService {
       await this.prisma.$disconnect();
     }
   }
-  async checkIfEmailAvailable() {}
-  async checkIfPhoneAvailable() {}
+  async addDevice(data: DeviceDTO) {
+    try {
+      const device = await this.prisma.user.update({
+        where: {
+          id: data.userId,
+        },
+        data: {
+          Device: {
+            create: {
+              deviceToken: data.DeviceToken,
+              deviceType: data.DeviceType,
+            },
+          },
+        },
+      });
+      return device;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  async removeDevice(deviceId) {
+    try {
+      const device = await this.prisma.device.delete({
+        where: {
+          id: deviceId,
+        },
+      });
+      return device;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  async getNotifications(user: any) {
+    try {
+      const notifications = await this.prisma.notification.findMany({
+        where: {
+          AND: [
+            {
+              userId: user.id,
+            },
+            {
+              NOT: {
+                status: 'READ',
+              },
+            },
+          ],
+        },
+      });
+
+      return notifications;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  async readNotifications(id: number, user: any) {
+    try {
+      await this.prisma.user.update({
+        where: {
+          id: user.id,
+        },
+        data: {
+          Notification: {
+            update: {
+              where: { id },
+              data: { status: 'READ' },
+            },
+          },
+        },
+      });
+
+      return;
+    } catch (err) {
+      throw err;
+    }
+  }
 }

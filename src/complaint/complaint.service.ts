@@ -24,6 +24,8 @@ export class ComplaintService {
     private prismaService: PrismaService,
     @InjectQueue('imageUpload')
     private readonly complaintImageUpload: Queue,
+    @InjectQueue('sendNotification')
+    private readonly sendNotification: Queue,
   ) {}
 
   async create(
@@ -458,7 +460,7 @@ export class ComplaintService {
     }
 
     if (user && user.role.type === Role.TECHNICAL_EXECUTOR) {
-      queryParams.where.assignTo.type = Role.TECHNICAL_EXECUTOR;
+      queryParams.where.assignTo = { type: Role.TECHNICAL_EXECUTOR };
     }
 
     try {
@@ -545,30 +547,33 @@ export class ComplaintService {
     images?: Express.Multer.File[],
   ) {
     try {
-      const activity = await this.prismaService.$transaction(async (prisma) => {
-        await prisma.complaint.findUniqueOrThrow({
-          where: {
-            id: +data.id,
-          },
-        });
+      const { activity, complaint } = await this.prismaService.$transaction(
+        async (prisma) => {
+          // await prisma.complaint.findUniqueOrThrow({
+          //   where: {
+          //     id: +data.id,
+          //   },
+          // });
 
-        const activity = await prisma.complaintActivity.create({
-          data: {
-            title: 'Ditolak',
-            descripiton: `Laporan ditolak oleh ${user.role.name}`,
-            notes: data.notes,
-            statusId: Status.DECLINED,
-            complaintId: +data.id,
-          },
-        });
+          const activity = await prisma.complaintActivity.create({
+            data: {
+              title: 'Ditolak',
+              descripiton: `Laporan ditolak oleh ${user.role.name}`,
+              notes: data.notes,
+              statusId: Status.DECLINED,
+              complaintId: +data.id,
+            },
+          });
 
-        await prisma.complaint.update({
-          where: { id: +data.id },
-          data: { statusId: Status.DECLINED },
-        });
+          const complaint = await prisma.complaint.update({
+            where: { id: +data.id },
+            data: { statusId: Status.DECLINED },
+            include: { assignTo: true, user: { include: { Device: true } } },
+          });
 
-        return activity;
-      });
+          return { activity, complaint };
+        },
+      );
       const activityId = activity.id;
       const fileName = `${activity.complaintId}_${activity.title}_image`;
 
@@ -585,6 +590,33 @@ export class ComplaintService {
         }));
         await this.complaintImageUpload.addBulk(jobs);
       }
+
+      await complaint.user.Device.map(async (device) => {
+        Logger.log(
+          `Sending notification ${device.id} for complaint ${activity.complaintId}`,
+          'Decline complaint',
+        );
+        // Send notification
+        await this.sendNotification.add('sendComplaintUpdateNotification', {
+          userId: device.userId,
+          deviceToken: device.deviceToken,
+          deviceId: device.id,
+          route: 'ComplaintDetail',
+          content: {
+            to: device.deviceToken,
+            body: `Hai ${complaint.user.firstName}! Laporanmu #${complaint.ref_id} ditolak oleh ${user.role.name}.`,
+            channelId: 'default',
+            priority: 'high',
+            title: 'Laporanmu Ditolak!',
+            data: {
+              type: 'complaint',
+              id: complaint.id,
+              route: 'ComplaintDetail',
+              params: complaint.id,
+            },
+          },
+        });
+      });
       return activity;
     } catch (err) {
       Logger.error(err, 'Dashboard decline complaint');
@@ -604,30 +636,33 @@ export class ComplaintService {
     images?: Express.Multer.File[],
   ) {
     try {
-      const activity = await this.prismaService.$transaction(async (prisma) => {
-        await prisma.complaint.findUniqueOrThrow({
-          where: {
-            id: +data.id,
-          },
-        });
+      const { activity, complaint } = await this.prismaService.$transaction(
+        async (prisma) => {
+          // await prisma.complaint.findUniqueOrThrow({
+          //   where: {
+          //     id: +data.id,
+          //   },
+          // });
 
-        const activity = await prisma.complaintActivity.create({
-          data: {
-            title: 'Diverifikasi',
-            descripiton: `Laporan telah diverifikasi oleh ${user.role.name}`,
-            notes: data.notes,
-            statusId: Status.VERIFICATION,
-            complaintId: +data.id,
-          },
-        });
+          const activity = await prisma.complaintActivity.create({
+            data: {
+              title: 'Diverifikasi',
+              descripiton: `Laporan telah diverifikasi oleh ${user.role.name}`,
+              notes: data.notes,
+              statusId: Status.VERIFICATION,
+              complaintId: +data.id,
+            },
+          });
 
-        await prisma.complaint.update({
-          where: { id: +data.id },
-          data: { statusId: Status.VERIFICATION },
-        });
+          const complaint = await prisma.complaint.update({
+            where: { id: +data.id },
+            data: { statusId: Status.VERIFICATION },
+            include: { assignTo: true, user: { include: { Device: true } } },
+          });
 
-        return activity;
-      });
+          return { activity, complaint };
+        },
+      );
       const activityId = activity.id;
       const fileName = `${activity.complaintId}_${activity.title}_image`;
 
@@ -644,6 +679,32 @@ export class ComplaintService {
         }));
         await this.complaintImageUpload.addBulk(jobs);
       }
+      await complaint.user.Device.map(async (device) => {
+        Logger.log(
+          `Sending notification ${device.id} for complaint ${activity.complaintId}`,
+          'Verify complaint',
+        );
+        // Send notification
+        await this.sendNotification.add('sendComplaintUpdateNotification', {
+          userId: device.userId,
+          deviceToken: device.deviceToken,
+          deviceId: device.id,
+          route: 'ComplaintDetail',
+          content: {
+            to: device.deviceToken,
+            body: `Hai ${complaint.user.firstName}! Laporanmu #${complaint.ref_id} telah diverifikasi oleh ${user.role.name}.`,
+            channelId: 'default',
+            priority: 'high',
+            title: 'Laporanmu Diverifikasi!',
+            data: {
+              type: 'complaint',
+              id: complaint.id,
+              route: 'ComplaintDetail',
+              params: complaint.id,
+            },
+          },
+        });
+      });
       return activity;
     } catch (err) {
       Logger.error(err, 'Dashboard verify complaint');
@@ -663,30 +724,33 @@ export class ComplaintService {
     images?: Express.Multer.File[],
   ) {
     try {
-      const activity = await this.prismaService.$transaction(async (prisma) => {
-        await prisma.complaint.findUniqueOrThrow({
-          where: {
-            id: +data.id,
-          },
-        });
+      const { activity, complaint } = await this.prismaService.$transaction(
+        async (prisma) => {
+          await prisma.complaint.findUniqueOrThrow({
+            where: {
+              id: +data.id,
+            },
+          });
 
-        const activity = await prisma.complaintActivity.create({
-          data: {
-            title: 'Selesai',
-            descripiton: `Laporan selesai ditindaklanjuti oleh ${user.role.name}`,
-            notes: data.notes,
-            statusId: Status.COMPLETE,
-            complaintId: +data.id,
-          },
-        });
+          const activity = await prisma.complaintActivity.create({
+            data: {
+              title: 'Selesai',
+              descripiton: `Laporan selesai ditindaklanjuti oleh ${user.role.name}`,
+              notes: data.notes,
+              statusId: Status.COMPLETE,
+              complaintId: +data.id,
+            },
+          });
 
-        await prisma.complaint.update({
-          where: { id: +data.id },
-          data: { statusId: Status.COMPLETE },
-        });
+          const complaint = await prisma.complaint.update({
+            where: { id: +data.id },
+            data: { statusId: Status.COMPLETE },
+            include: { assignTo: true, user: { include: { Device: true } } },
+          });
 
-        return activity;
-      });
+          return { activity, complaint };
+        },
+      );
       const activityId = activity.id;
       const fileName = `${activity.complaintId}_${activity.title}_image`;
 
@@ -703,6 +767,33 @@ export class ComplaintService {
         }));
         await this.complaintImageUpload.addBulk(jobs);
       }
+
+      await complaint.user.Device.map(async (device) => {
+        Logger.log(
+          `Sending notification ${device.id} for complaint ${activity.complaintId}`,
+          'Complete complaint',
+        );
+        // Send notification
+        await this.sendNotification.add('sendComplaintUpdateNotification', {
+          userId: device.userId,
+          deviceToken: device.deviceToken,
+          deviceId: device.id,
+          route: 'ComplaintDetail',
+          content: {
+            to: device.deviceToken,
+            body: `Hai ${complaint.user.firstName}! Laporanmu #${complaint.ref_id} telah diselesaikan oleh ${user.role.name}.`,
+            channelId: 'default',
+            priority: 'high',
+            title: 'Laporanmu Selesai!',
+            data: {
+              type: 'complaint',
+              id: complaint.id,
+              route: 'ComplaintDetail',
+              params: complaint.id,
+            },
+          },
+        });
+      });
       return activity;
     } catch (err) {
       Logger.error(err, 'Dashboard complete complaint');
@@ -722,30 +813,33 @@ export class ComplaintService {
     images?: Express.Multer.File[],
   ) {
     try {
-      const activity = await this.prismaService.$transaction(async (prisma) => {
-        await prisma.complaint.findUniqueOrThrow({
-          where: {
-            id: +data.id,
-          },
-        });
+      const { activity, complaint } = await this.prismaService.$transaction(
+        async (prisma) => {
+          await prisma.complaint.findUniqueOrThrow({
+            where: {
+              id: +data.id,
+            },
+          });
 
-        const activity = await prisma.complaintActivity.create({
-          data: {
-            title: 'Diteruskan',
-            descripiton: `Laporan diteruskan kepada ${user.role.name}`,
-            notes: data.notes,
-            statusId: Status.PROCESS,
-            complaintId: +data.id,
-          },
-        });
+          const activity = await prisma.complaintActivity.create({
+            data: {
+              title: 'Diteruskan',
+              descripiton: `Laporan diteruskan kepada ${user.role.name}`,
+              notes: data.notes,
+              statusId: Status.PROCESS,
+              complaintId: +data.id,
+            },
+          });
 
-        await prisma.complaint.update({
-          where: { id: +data.id },
-          data: { statusId: Status.PROCESS, assignToId: data.roleId },
-        });
+          const complaint = await prisma.complaint.update({
+            where: { id: +data.id },
+            data: { statusId: Status.PROCESS, assignToId: data.roleId },
+            include: { assignTo: true, user: { include: { Device: true } } },
+          });
 
-        return activity;
-      });
+          return { activity, complaint };
+        },
+      );
       const activityId = activity.id;
       const fileName = `${activity.complaintId}_${activity.title}_image`;
 
@@ -762,6 +856,32 @@ export class ComplaintService {
         }));
         await this.complaintImageUpload.addBulk(jobs);
       }
+      await complaint.user.Device.map(async (device) => {
+        Logger.log(
+          `Sending notification ${device.id} for complaint ${activity.complaintId}`,
+          'Assign complaint',
+        );
+        // Send notification
+        await this.sendNotification.add('sendComplaintUpdateNotification', {
+          userId: device.userId,
+          deviceToken: device.deviceToken,
+          deviceId: device.id,
+          route: 'ComplaintDetail',
+          content: {
+            to: device.deviceToken,
+            body: `Hai ${complaint.user.firstName}! Laporanmu #${complaint.ref_id} diteruskan kepada ${complaint.assignTo.name}.`,
+            channelId: 'default',
+            priority: 'high',
+            title: 'Laporanmu Diteruskan!',
+            data: {
+              type: 'complaint',
+              id: complaint.id,
+              route: 'ComplaintDetail',
+              params: complaint.id,
+            },
+          },
+        });
+      });
       return activity;
     } catch (err) {
       Logger.error(err, 'Dashboard complete complaint');
@@ -781,30 +901,33 @@ export class ComplaintService {
     images?: Express.Multer.File[],
   ) {
     try {
-      const activity = await this.prismaService.$transaction(async (prisma) => {
-        await prisma.complaint.findUniqueOrThrow({
-          where: {
-            id: +data.id,
-          },
-        });
+      const { activity, complaint } = await this.prismaService.$transaction(
+        async (prisma) => {
+          // await prisma.complaint.findUniqueOrThrow({
+          //   where: {
+          //     id: +data.id,
+          //   },
+          // });
 
-        const activity = await prisma.complaintActivity.create({
-          data: {
-            title: 'Diteruskan',
-            descripiton: `Laporan sedang ditindaklanjuti oleh ${user.role.name}`,
-            notes: data.notes,
-            statusId: Status.PROCESS,
-            complaintId: +data.id,
-          },
-        });
+          const activity = await prisma.complaintActivity.create({
+            data: {
+              title: 'Diproses',
+              descripiton: `Laporan sedang ditindaklanjuti oleh ${user.role.name}`,
+              notes: data.notes,
+              statusId: Status.PROCESS,
+              complaintId: +data.id,
+            },
+          });
 
-        await prisma.complaint.update({
-          where: { id: +data.id },
-          data: { statusId: Status.PROCESS },
-        });
+          const complaint = await prisma.complaint.update({
+            where: { id: +data.id },
+            data: { statusId: Status.PROCESS },
+            include: { assignTo: true, user: { include: { Device: true } } },
+          });
 
-        return activity;
-      });
+          return { activity, complaint };
+        },
+      );
       const activityId = activity.id;
       const fileName = `${activity.complaintId}_${activity.title}_image`;
 
@@ -821,6 +944,34 @@ export class ComplaintService {
         }));
         await this.complaintImageUpload.addBulk(jobs);
       }
+
+      await complaint.user.Device.map(async (device) => {
+        Logger.log(
+          `Sending notification ${device.id} for complaint ${activity.complaintId}`,
+          'Process complaint',
+        );
+        // Send notification
+        await this.sendNotification.add('sendComplaintUpdateNotification', {
+          userId: device.userId,
+          deviceToken: device.deviceToken,
+          deviceId: device.id,
+          route: 'ComplaintDetail',
+          content: {
+            to: device.deviceToken,
+            body: `Hai ${complaint.user.firstName}! Laporanmu #${complaint.ref_id} sedang ditindaklanjuti oleh ${user.role.name}.`,
+            channelId: 'default',
+            priority: 'high',
+            title: 'Laporanmu Ditindaklanjuti!',
+            data: {
+              type: 'complaint',
+              id: complaint.id,
+              route: 'ComplaintDetail',
+              params: complaint.id,
+            },
+          },
+        });
+      });
+
       return activity;
     } catch (err) {
       Logger.error(err, 'Dashboard complete complaint');

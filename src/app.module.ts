@@ -20,6 +20,10 @@ import { ImageQueue } from './queue/image.queue';
 import { ImageService } from './image/image.service';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { StatusModule } from './status/status.module';
+import { NotificationModule } from './notification/notification.module';
+import { NotificationService } from './notification/notification.service';
+import { UserService } from './user/user.service';
+import { NotificationQueue } from './queue/notification.queue';
 
 @Module({
   imports: [
@@ -35,9 +39,14 @@ import { StatusModule } from './status/status.module';
       }),
       inject: [ConfigService],
     }),
-    BullModule.registerQueue({
-      name: 'imageUpload',
-    }),
+    BullModule.registerQueue(
+      {
+        name: 'imageUpload',
+      },
+      {
+        name: 'sendNotification',
+      },
+    ),
     CacheModule.registerAsync({
       isGlobal: true,
       imports: [ConfigModule],
@@ -77,7 +86,16 @@ import { StatusModule } from './status/status.module';
     ImageModule,
     AnalyticsModule,
     StatusModule,
+    NotificationModule,
   ],
-  providers: [WhatsappService, IsUniqueConstraint, ImageQueue, ImageService],
+  providers: [
+    WhatsappService,
+    IsUniqueConstraint,
+    ImageQueue,
+    ImageService,
+    NotificationService,
+    NotificationQueue,
+    UserService,
+  ],
 })
 export class AppModule {}

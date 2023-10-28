@@ -6,9 +6,14 @@ import { BullModule } from '@nestjs/bull';
 
 @Module({
   imports: [
-    BullModule.registerQueue({
-      name: 'imageUpload',
-    }),
+    BullModule.registerQueue(
+      {
+        name: 'imageUpload',
+      },
+      {
+        name: 'sendNotification',
+      },
+    ),
   ],
   providers: [ComplaintService, PrismaService],
   controllers: [ComplaintController],

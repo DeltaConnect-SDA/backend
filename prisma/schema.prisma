@@ -28,6 +28,8 @@ model User {
   Complaint         Complaint[]
   ComplaintSaved    ComplaintSaved[]
   ComplaintFeedBack ComplaintFeedBack[]
+  Notification      Notification[]
+  Device            Device[]
 }
 
 model UserDetail {
@@ -188,4 +190,43 @@ model ComplaintFeedBack {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id     Int    @id @default(autoincrement())
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  status  NotificationStatus @default(WAITING)
+  title   String
+  content String
+  route   String?
+  param   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("notifications")
+}
+
+model Device {
+  id     Int    @id @default(autoincrement())
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  deviceToken String
+  deviceType  String
+  lastSent    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("devices")
+}
+
+enum NotificationStatus {
+  SENT
+  FAILED
+  WAITING
+  READ
 }
