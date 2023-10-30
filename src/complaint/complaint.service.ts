@@ -86,6 +86,7 @@ export class ComplaintService {
                   title: 'Menunggu',
                   descripiton: 'Laporan anda menunggu respon petugas.',
                   statusId: 1,
+                  userId: user.id,
                 },
               },
             },
@@ -223,6 +224,38 @@ export class ComplaintService {
         // ComplaintFeedBack: {
         //   where: { userId },
         // },
+      },
+    });
+
+    if (!complaint) {
+      throw {
+        message: 'Laporan tidak ditemukan.',
+        code: HttpStatus.NOT_FOUND,
+        error: 'Complaint Not Found',
+      };
+    }
+    return complaint;
+  }
+
+  async findDashboard(complaintId: number) {
+    const complaint = await this.prismaService.complaint.findUnique({
+      where: { id: complaintId },
+      include: {
+        ComplaintImages: { select: { path: true, placeholder: true } },
+        category: { select: { title: true, id: true } },
+        priority: { select: { title: true, id: true, color: true } },
+        status: { select: { id: true, title: true, color: true } },
+        ComplaintActivity: true,
+        user: {
+          select: {
+            firstName: true,
+            LastName: true,
+            email: true,
+            phone: true,
+            UserDetail: true,
+          },
+        },
+        ComplaintFeedBack: true,
       },
     });
 
@@ -375,6 +408,7 @@ export class ComplaintService {
                 title: 'Dibatalkan',
                 descripiton: 'Laporan dibatalkan oleh pengguna',
                 statusId,
+                userId: user.id,
               },
             });
           }
@@ -562,6 +596,7 @@ export class ComplaintService {
               notes: data.notes,
               statusId: Status.DECLINED,
               complaintId: +data.id,
+              userId: user.id,
             },
           });
 
@@ -602,6 +637,8 @@ export class ComplaintService {
           deviceToken: device.deviceToken,
           deviceId: device.id,
           route: 'ComplaintDetail',
+          param: complaint.id.toString(),
+          type: 'complaint',
           content: {
             to: device.deviceToken,
             body: `Hai ${complaint.user.firstName}! Laporanmu #${complaint.ref_id} ditolak oleh ${user.role.name}.`,
@@ -612,7 +649,7 @@ export class ComplaintService {
               type: 'complaint',
               id: complaint.id,
               route: 'ComplaintDetail',
-              params: complaint.id,
+              param: complaint.id,
             },
           },
         });
@@ -651,6 +688,7 @@ export class ComplaintService {
               notes: data.notes,
               statusId: Status.VERIFICATION,
               complaintId: +data.id,
+              userId: user.id,
             },
           });
 
@@ -690,6 +728,8 @@ export class ComplaintService {
           deviceToken: device.deviceToken,
           deviceId: device.id,
           route: 'ComplaintDetail',
+          param: complaint.id.toString(),
+          type: 'complaint',
           content: {
             to: device.deviceToken,
             body: `Hai ${complaint.user.firstName}! Laporanmu #${complaint.ref_id} telah diverifikasi oleh ${user.role.name}.`,
@@ -700,7 +740,7 @@ export class ComplaintService {
               type: 'complaint',
               id: complaint.id,
               route: 'ComplaintDetail',
-              params: complaint.id,
+              param: complaint.id,
             },
           },
         });
@@ -739,6 +779,7 @@ export class ComplaintService {
               notes: data.notes,
               statusId: Status.COMPLETE,
               complaintId: +data.id,
+              userId: user.id,
             },
           });
 
@@ -779,6 +820,8 @@ export class ComplaintService {
           deviceToken: device.deviceToken,
           deviceId: device.id,
           route: 'ComplaintDetail',
+          param: complaint.id.toString(),
+          type: 'complaint',
           content: {
             to: device.deviceToken,
             body: `Hai ${complaint.user.firstName}! Laporanmu #${complaint.ref_id} telah diselesaikan oleh ${user.role.name}.`,
@@ -789,7 +832,7 @@ export class ComplaintService {
               type: 'complaint',
               id: complaint.id,
               route: 'ComplaintDetail',
-              params: complaint.id,
+              param: complaint.id,
             },
           },
         });
@@ -828,6 +871,7 @@ export class ComplaintService {
               notes: data.notes,
               statusId: Status.PROCESS,
               complaintId: +data.id,
+              userId: user.id,
             },
           });
 
@@ -867,6 +911,8 @@ export class ComplaintService {
           deviceToken: device.deviceToken,
           deviceId: device.id,
           route: 'ComplaintDetail',
+          param: complaint.id.toString(),
+          type: 'complaint',
           content: {
             to: device.deviceToken,
             body: `Hai ${complaint.user.firstName}! Laporanmu #${complaint.ref_id} diteruskan kepada ${complaint.assignTo.name}.`,
@@ -877,7 +923,7 @@ export class ComplaintService {
               type: 'complaint',
               id: complaint.id,
               route: 'ComplaintDetail',
-              params: complaint.id,
+              param: complaint.id,
             },
           },
         });
@@ -916,6 +962,7 @@ export class ComplaintService {
               notes: data.notes,
               statusId: Status.PROCESS,
               complaintId: +data.id,
+              userId: user.id,
             },
           });
 
@@ -956,6 +1003,8 @@ export class ComplaintService {
           deviceToken: device.deviceToken,
           deviceId: device.id,
           route: 'ComplaintDetail',
+          param: complaint.id.toString(),
+          type: 'complaint',
           content: {
             to: device.deviceToken,
             body: `Hai ${complaint.user.firstName}! Laporanmu #${complaint.ref_id} sedang ditindaklanjuti oleh ${user.role.name}.`,
@@ -966,7 +1015,7 @@ export class ComplaintService {
               type: 'complaint',
               id: complaint.id,
               route: 'ComplaintDetail',
-              params: complaint.id,
+              param: complaint.id,
             },
           },
         });
@@ -982,6 +1031,24 @@ export class ComplaintService {
       };
     } finally {
       this.prismaService.$disconnect;
+    }
+  }
+
+  async getStatus(id: number) {
+    try {
+      const status = await this.prismaService.complaintActivity.findMany({
+        where: {
+          complaintId: id,
+        },
+        include: { complaint: true, images: true, status: true },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      return status;
+    } catch (err) {
+      throw err;
     }
   }
 }

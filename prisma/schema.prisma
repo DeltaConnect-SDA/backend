@@ -30,6 +30,7 @@ model User {
   ComplaintFeedBack ComplaintFeedBack[]
   Notification      Notification[]
   Device            Device[]
+  ComplaintActivity ComplaintActivity[]
 }
 
 model UserDetail {
@@ -136,6 +137,9 @@ model ComplaintActivity {
   complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
   complaintId Int
 
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
   title       String
   descripiton String
   notes       String?
@@ -202,6 +206,7 @@ model Notification {
   content String
   route   String?
   param   String?
+  type    String
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
