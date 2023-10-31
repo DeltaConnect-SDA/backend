@@ -53,7 +53,7 @@ export class AnalyticsService {
         const formattedDate = date.toLocaleDateString('id-ID', {
           month: 'long',
           day: 'numeric',
-          timeZone: 'UTC',
+          timeZone: 'Asia/Jakarta',
         });
         analytics[formattedDate] = {
           date: formattedDate,
