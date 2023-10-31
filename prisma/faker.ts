@@ -86,6 +86,7 @@ async function main() {
               title: 'Menunggu',
               descripiton: 'Laporan anda menunggu respon petugas.',
               statusId: 1,
+              userId: user.id,
             },
           },
           ComplaintImages: {

@@ -88,6 +88,7 @@ model Complaint {
   lat             String
   long            String
   village         String
+  isVerified      Boolean @default(false)
 
   total_feedback Int?
   total_score    Int?
