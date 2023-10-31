@@ -99,6 +99,9 @@ export class UserService {
             },
           ],
         },
+        orderBy: {
+          createdAt: 'desc',
+        },
       });
 
       return notifications;
@@ -127,5 +130,25 @@ export class UserService {
     } catch (err) {
       throw err;
     }
+  }
+
+  async getOfficers() {
+    const officers = await this.prisma.role.findMany({
+      where: {
+        NOT: [
+          {
+            type: Role.PUBLIC,
+          },
+          {
+            type: Role.AUTHORIZER,
+          },
+          {
+            type: Role.SUPER_ADMIN,
+          },
+        ],
+      },
+    });
+
+    return officers;
   }
 }

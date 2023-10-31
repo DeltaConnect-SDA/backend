@@ -30,10 +30,11 @@ export class NotificationQueue {
       route?: string;
       param?: string;
       content: ExpoPushMessage;
+      type: string;
     }>,
   ) {
     const { data } = job;
-    const { content, deviceToken, deviceId, userId, route, param } = data;
+    const { content, deviceToken, deviceId, userId, route, param, type } = data;
 
     try {
       Logger.log('Send push notification');
@@ -57,6 +58,7 @@ export class NotificationQueue {
               content: content.body,
               route: route || null,
               param: param || null,
+              type: type,
             },
           },
         },

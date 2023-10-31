@@ -104,6 +104,51 @@ export class UserController {
           }
         }
       }
+      console.error(err);
+
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        code: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: err.message,
+        error: err.name || err.error,
+      });
+    }
+  }
+
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN, Role.AUTHORIZER, Role.TECHNICAL_EXECUTOR)
+  @Get('officers')
+  async getAllOfficers(@Res() res: Response) {
+    try {
+      const response = await this.userService.getOfficers();
+
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        code: HttpStatus.OK,
+        message: 'Berhasil mengambil data petugas!',
+        data: response,
+      });
+    } catch (err) {
+      if (err instanceof PrismaClientKnownRequestError) {
+        switch (err.code) {
+          case 'P2025': {
+            res.status(HttpStatus.NOT_FOUND).json({
+              success: false,
+              code: HttpStatus.NOT_FOUND,
+              message: err.message,
+              error: err.name,
+            });
+          }
+          default: {
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+              success: false,
+              code: HttpStatus.INTERNAL_SERVER_ERROR,
+              message: err.message,
+              error: err.name,
+            });
+          }
+        }
+      }
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
         code: HttpStatus.INTERNAL_SERVER_ERROR,
