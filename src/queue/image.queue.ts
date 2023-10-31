@@ -69,7 +69,7 @@ export class ImageQueue {
     const { activityId, buffer, fileName, size, mimeType } = data;
     const path = await this.imageService.upload(
       buffer,
-      fileName,
+      `${(Math.random() + 1).toString(36).substring(2)}-${fileName}`,
       Folder.COMPLAINT,
       size,
       mimeType,
