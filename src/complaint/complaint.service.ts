@@ -102,7 +102,7 @@ export class ComplaintService {
         data: {
           complaintId,
           buffer: image.buffer,
-          fileName: fileName + index + '.' + image.mimetype.split('/')[1],
+          fileName: fileName + ' ' + index + '.' + image.mimetype.split('/')[1],
           size: image.size,
           mimeType: image.mimetype,
         },
@@ -245,6 +245,7 @@ export class ComplaintService {
         category: { select: { title: true, id: true } },
         priority: { select: { title: true, id: true, color: true } },
         status: { select: { id: true, title: true, color: true } },
+        assignTo: true,
         ComplaintActivity: true,
         user: {
           select: {
@@ -255,7 +256,7 @@ export class ComplaintService {
             UserDetail: true,
           },
         },
-        ComplaintFeedBack: true,
+        ComplaintFeedBack: { include: { user: true } },
       },
     });
 
@@ -618,7 +619,8 @@ export class ComplaintService {
           data: {
             activityId,
             buffer: image.buffer,
-            fileName: fileName + index + '.' + image.mimetype.split('/')[1],
+            fileName:
+              fileName + ' ' + index + '.' + image.mimetype.split('/')[1],
             size: image.size,
             mimeType: image.mimetype,
           },
@@ -694,7 +696,7 @@ export class ComplaintService {
 
           const complaint = await prisma.complaint.update({
             where: { id: +data.id },
-            data: { statusId: Status.VERIFICATION },
+            data: { statusId: Status.VERIFICATION, isVerified: true },
             include: { assignTo: true, user: { include: { Device: true } } },
           });
 
@@ -710,7 +712,8 @@ export class ComplaintService {
           data: {
             activityId,
             buffer: image.buffer,
-            fileName: fileName + index + '.' + image.mimetype.split('/')[1],
+            fileName:
+              fileName + ' ' + index + '.' + image.mimetype.split('/')[1],
             size: image.size,
             mimeType: image.mimetype,
           },
@@ -801,7 +804,8 @@ export class ComplaintService {
           data: {
             activityId,
             buffer: image.buffer,
-            fileName: fileName + index + '.' + image.mimetype.split('/')[1],
+            fileName:
+              fileName + ' ' + index + '.' + image.mimetype.split('/')[1],
             size: image.size,
             mimeType: image.mimetype,
           },
@@ -864,23 +868,22 @@ export class ComplaintService {
             },
           });
 
-          const activity = await prisma.complaintActivity.create({
-            data: {
-              title: 'Diteruskan',
-              descripiton: `Laporan diteruskan kepada ${user.role.name}`,
-              notes: data.notes,
-              statusId: Status.PROCESS,
-              complaintId: +data.id,
-              userId: user.id,
-            },
-          });
-
           const complaint = await prisma.complaint.update({
             where: { id: +data.id },
             data: { statusId: Status.PROCESS, assignToId: data.roleId },
             include: { assignTo: true, user: { include: { Device: true } } },
           });
 
+          const activity = await prisma.complaintActivity.create({
+            data: {
+              title: 'Diteruskan',
+              descripiton: `Laporan diteruskan kepada ${complaint.assignTo.name}`,
+              notes: data.notes,
+              statusId: Status.PROCESS,
+              complaintId: +data.id,
+              userId: user.id,
+            },
+          });
           return { activity, complaint };
         },
       );
@@ -893,7 +896,8 @@ export class ComplaintService {
           data: {
             activityId,
             buffer: image.buffer,
-            fileName: fileName + index + '.' + image.mimetype.split('/')[1],
+            fileName:
+              fileName + ' ' + index + '.' + image.mimetype.split('/')[1],
             size: image.size,
             mimeType: image.mimetype,
           },
@@ -984,7 +988,8 @@ export class ComplaintService {
           data: {
             activityId,
             buffer: image.buffer,
-            fileName: fileName + index + '.' + image.mimetype.split('/')[1],
+            fileName:
+              fileName + ' ' + index + '.' + image.mimetype.split('/')[1],
             size: image.size,
             mimeType: image.mimetype,
           },

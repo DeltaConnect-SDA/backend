@@ -665,6 +665,31 @@ export class ComplaintController {
   }
 
   @UseGuards(JwtGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN, Role.AUTHORIZER, Role.TECHNICAL_EXECUTOR)
+  @Get('complaints/:id/dashboard')
+  async showComplaintDetailDashboard(
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    try {
+      const complaints = await this.complaintService.findDashboard(+id);
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        code: HttpStatus.OK,
+        message: 'Berhasil mengambil data laporan!',
+        data: complaints,
+      });
+    } catch (err) {
+      return res.status(err.code).json({
+        success: false,
+        code: err.code,
+        message: err.message,
+        error: err.error,
+      });
+    }
+  }
+
+  @UseGuards(JwtGuard, RolesGuard)
   @Roles(Role.PUBLIC)
   @Patch('complaints/:id/cancel')
   async cancleComplaint(
@@ -809,6 +834,46 @@ export class ComplaintController {
         success: true,
         code: HttpStatus.OK,
         message: 'Laporan berhasil diselesaikan!',
+        data: response,
+      });
+    } catch (err) {
+      if (err instanceof PrismaClientKnownRequestError) {
+        switch (err.code) {
+          case 'P2025': {
+            res.status(HttpStatus.NOT_FOUND).json({
+              success: false,
+              code: HttpStatus.NOT_FOUND,
+              message: err.message,
+              error: err.name,
+            });
+          }
+          default: {
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+              success: false,
+              code: HttpStatus.INTERNAL_SERVER_ERROR,
+              message: err.message,
+              error: err.name,
+            });
+          }
+        }
+      }
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        code: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: err.message,
+        error: err.name || err.error,
+      });
+    }
+  }
+
+  @Get('complaints/:id/status')
+  async complaintStatus(@Param('id') id: string, @Res() res: Response) {
+    try {
+      const response = await this.complaintService.getStatus(+id);
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        code: HttpStatus.OK,
+        message: 'Berhasil mengambil data status laporan!',
         data: response,
       });
     } catch (err) {
