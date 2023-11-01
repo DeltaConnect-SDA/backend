@@ -2,6 +2,11 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Role } from 'src/auth/enum/role.enum';
 import { DeviceDTO } from 'src/auth/dto';
+import { createPaginator } from 'prisma-pagination';
+import { Prisma } from '@prisma/client';
+import { CreateOfficerDTO, CreateRoleDTO } from './dto';
+import * as argon from 'argon2';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class UserService {
@@ -150,5 +155,174 @@ export class UserService {
     });
 
     return officers;
+  }
+
+  async search(query, page, perPage, orderByDate) {
+    const paginate = createPaginator({ perPage });
+    const queryParams: Prisma.UserFindManyArgs = {
+      include: {
+        UserDetail: true,
+        role: true,
+      },
+      orderBy: { createdAt: orderByDate },
+      where: {
+        role: { type: Role.PUBLIC },
+        OR: [
+          {
+            email: {
+              contains: query,
+              mode: 'insensitive',
+            },
+          },
+          {
+            firstName: {
+              contains: query,
+              mode: 'insensitive',
+            },
+          },
+          {
+            LastName: {
+              contains: query,
+              mode: 'insensitive',
+            },
+          },
+          {
+            phone: {
+              contains: query,
+              mode: 'insensitive',
+            },
+          },
+        ],
+      },
+    };
+
+    try {
+      return paginate(this.prisma.user, queryParams, { page });
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  async searchOfficers(query, page, perPage, orderByDate) {
+    const paginate = createPaginator({ perPage });
+    const queryParams: Prisma.UserFindManyArgs = {
+      include: {
+        UserDetail: true,
+        role: true,
+      },
+      orderBy: { createdAt: orderByDate },
+      where: {
+        role: {
+          NOT: [
+            {
+              type: Role.SUPER_ADMIN,
+            },
+            {
+              type: Role.PUBLIC,
+            },
+          ],
+        },
+        OR: [
+          {
+            email: {
+              contains: query,
+              mode: 'insensitive',
+            },
+          },
+          {
+            firstName: {
+              contains: query,
+              mode: 'insensitive',
+            },
+          },
+          {
+            LastName: {
+              contains: query,
+              mode: 'insensitive',
+            },
+          },
+          {
+            phone: {
+              contains: query,
+              mode: 'insensitive',
+            },
+          },
+        ],
+      },
+    };
+
+    try {
+      return paginate(this.prisma.user, queryParams, { page });
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  async createOfficer(data: CreateOfficerDTO) {
+    // Generate passwprd hash
+    const password = await argon.hash(data.password);
+
+    // Get role id
+    const role = await this.prisma.role.findUniqueOrThrow({
+      where: { id: data.roleId },
+    });
+
+    // Save the new user in the database
+    try {
+      const user = await this.prisma.user.create({
+        data: {
+          firstName: data.firstName,
+          LastName: data.LastName,
+          email: data.email.toLowerCase().trim(),
+          phone: data.phone,
+          password,
+          role: {
+            connect: { id: role.id },
+          },
+          UserDetail: {
+            create: {},
+          },
+        },
+        select: {
+          id: true,
+          email: true,
+          phone: true,
+          firstName: true,
+          LastName: true,
+        },
+      });
+      return user;
+    } catch (error) {
+      if (error instanceof PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          if (error.meta.target[0] == 'phone') {
+            throw {
+              message: [{ filed: 'phone', error: 'Nomor HP telah digunakan!' }],
+              code: 403,
+              error: 'Bad Reuqest',
+            };
+          } else if (error.meta.target[0] == 'email') {
+            throw {
+              message: [{ filed: 'email', error: 'Email telah digunakan!' }],
+              code: 403,
+              error: 'Bad Reuqest',
+            };
+          }
+        }
+      }
+      throw error;
+    }
+  }
+
+  async createRole(data: CreateRoleDTO) {
+    const role = this.prisma.role.create({
+      data: {
+        name: data.name,
+        type: data.type,
+        description: data.description,
+      },
+    });
+
+    return role;
   }
 }

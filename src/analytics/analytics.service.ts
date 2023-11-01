@@ -150,7 +150,12 @@ export class AnalyticsService {
         where: complaintWaitingWhere,
       });
 
-      const verificationRequests = 67;
+      const verificationRequests =
+        await this.prismaService.verificationRequest.count({
+          where: {
+            statusId: Status.WAITING,
+          },
+        });
 
       const users = await this.prismaService.user.count();
 

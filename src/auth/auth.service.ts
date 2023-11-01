@@ -40,7 +40,10 @@ export class AuthService {
 
   async register(data: RegisterDTO) {
     const foundButNotVerified = await this.prisma.user.findUnique({
-      where: { email: data.email, OR: [{ phone: data.phone }] },
+      where: {
+        email: data.email.toLowerCase(),
+        OR: [{ phone: data.phone.toLowerCase() }],
+      },
       select: {
         UserDetail: {
           select: { isPhoneVerified: true, isEmailVerified: true },
@@ -68,7 +71,7 @@ export class AuthService {
         data: {
           firstName: data.firstName,
           LastName: data.lastName,
-          email: data.email.toLowerCase(),
+          email: data.email.toLowerCase().trim(),
           phone: data.phone,
           password,
           role: {
