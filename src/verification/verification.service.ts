@@ -29,6 +29,7 @@ export class VerificationService {
                   content: 'Menunggu verifikasi oleh petugas',
                 },
               },
+              statusId: Status.WAITING,
             },
           },
           UserDetail: {
@@ -80,6 +81,7 @@ export class VerificationService {
               content: data.content,
             },
           },
+          statusId: data.status,
         },
       });
       return await this.prismaService.user.update({
@@ -107,6 +109,7 @@ export class VerificationService {
               content: data.content,
             },
           },
+          statusId: data.status,
         },
       });
     }

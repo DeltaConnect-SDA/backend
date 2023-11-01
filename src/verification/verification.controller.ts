@@ -116,7 +116,7 @@ export class VerificationController {
   }
 
   @UseGuards(JwtGuard, RolesGuard)
-  //   @Roles(Role.SUPER_ADMIN, Role.AUTHORIZER)
+  @Roles(Role.SUPER_ADMIN, Role.AUTHORIZER)
   @Get(':id')
   async showVerificationRequest(@Param('id') id: string, @Res() res: Response) {
     try {
