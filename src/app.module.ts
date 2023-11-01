@@ -24,6 +24,7 @@ import { NotificationModule } from './notification/notification.module';
 import { NotificationService } from './notification/notification.service';
 import { UserService } from './user/user.service';
 import { NotificationQueue } from './queue/notification.queue';
+import { VerificationModule } from './verification/verification.module';
 
 @Module({
   imports: [
@@ -87,6 +88,7 @@ import { NotificationQueue } from './queue/notification.queue';
     AnalyticsModule,
     StatusModule,
     NotificationModule,
+    VerificationModule,
   ],
   providers: [
     WhatsappService,

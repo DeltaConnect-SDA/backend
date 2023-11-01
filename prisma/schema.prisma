@@ -21,16 +21,17 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  role              Role                @relation(fields: [roleId], references: [id])
-  roleId            String
-  UserDetail        UserDetail          @relation(fields: [userDetailId], references: [id], onDelete: Cascade)
-  userDetailId      String              @unique
-  Complaint         Complaint[]
-  ComplaintSaved    ComplaintSaved[]
-  ComplaintFeedBack ComplaintFeedBack[]
-  Notification      Notification[]
-  Device            Device[]
-  ComplaintActivity ComplaintActivity[]
+  role                Role                  @relation(fields: [roleId], references: [id])
+  roleId              String
+  UserDetail          UserDetail            @relation(fields: [userDetailId], references: [id], onDelete: Cascade)
+  userDetailId        String                @unique
+  Complaint           Complaint[]
+  ComplaintSaved      ComplaintSaved[]
+  ComplaintFeedBack   ComplaintFeedBack[]
+  Notification        Notification[]
+  Device              Device[]
+  ComplaintActivity   ComplaintActivity[]
+  VerificationRequest VerificationRequest[]
 }
 
 model UserDetail {
@@ -69,6 +70,7 @@ model Status {
   updatedAt         DateTime            @updatedAt
   Complaint         Complaint[]
   ComplaintActivity ComplaintActivity[]
+  VerificationLog   VerificationLog[]
 }
 
 model Complaint {
@@ -235,4 +237,31 @@ enum NotificationStatus {
   FAILED
   WAITING
   READ
+}
+
+model VerificationRequest {
+  id     String @id @default(uuid())
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  VerificationLog VerificationLog[]
+
+  @@map("verification_requests")
+}
+
+model VerificationLog {
+  id                    Int                 @id @default(autoincrement())
+  verificationRequest   VerificationRequest @relation(fields: [verificationRequestId], references: [id])
+  verificationRequestId String
+  status                Status              @relation(fields: [statusId], references: [id])
+  statusId              Int
+  title                 String
+  content               String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("verifiaction_logs")
 }
