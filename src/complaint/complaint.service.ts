@@ -181,6 +181,13 @@ export class ComplaintService {
   }
 
   async findById(id: number) {
+    if (!id) {
+      throw {
+        message: 'Laporan tidak ditemukan.',
+        code: HttpStatus.NOT_FOUND,
+        error: 'Complaint Not Found',
+      };
+    }
     try {
       const complaints = await this.prismaService.complaint.findUnique({
         where: { id },
@@ -208,6 +215,13 @@ export class ComplaintService {
   }
 
   async findComplaintWithSaveStatus(complaintId: number, userId: string) {
+    if (!complaintId) {
+      throw {
+        message: 'Laporan tidak ditemukan.',
+        code: HttpStatus.NOT_FOUND,
+        error: 'Complaint Not Found',
+      };
+    }
     const complaint = await this.prismaService.complaint.findUnique({
       where: { id: complaintId },
       include: {
@@ -238,6 +252,13 @@ export class ComplaintService {
   }
 
   async findDashboard(complaintId: number) {
+    if (!complaintId) {
+      throw {
+        message: 'Laporan tidak ditemukan.',
+        code: HttpStatus.NOT_FOUND,
+        error: 'Complaint Not Found',
+      };
+    }
     const complaint = await this.prismaService.complaint.findUnique({
       where: { id: complaintId },
       include: {
@@ -246,7 +267,18 @@ export class ComplaintService {
         priority: { select: { title: true, id: true, color: true } },
         status: { select: { id: true, title: true, color: true } },
         assignTo: true,
-        ComplaintActivity: true,
+        ComplaintActivity: {
+          include: {
+            user: {
+              select: {
+                firstName: true,
+                LastName: true,
+                email: true,
+                role: { select: { type: true, name: true } },
+              },
+            },
+          },
+        },
         user: {
           select: {
             firstName: true,
