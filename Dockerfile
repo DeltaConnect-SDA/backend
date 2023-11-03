@@ -23,12 +23,16 @@ ENV NODE_ENV=${NODE_ENV}
 WORKDIR /usr/src/app
 
 COPY package*.json ./
+COPY prisma ./prisma
 
 RUN npm ci --only=production && npm cache clean --force
 RUN npm install argon2 --build-from-source
+RUN npx prisma generate --schema ./prisma/schema.prisma
+RUN npx prisma generate
 
 COPY . .
 
 COPY --from=development /usr/src/app/dist ./dist
+RUN npx prisma generate --schema ../prisma/schema.prisma
 
 CMD ["node", "dist/src/main"]
