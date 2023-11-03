@@ -10,7 +10,11 @@ export class SuggestionService {
   constructor(private prismaService: PrismaService) {}
 
   async create(data: CreateSuggestionDTO, user: any) {
-    if (user.role.type !== Role.PUBLIC && !user.UserDetail.isPhoneVerified) {
+    if (
+      user.role.type !== Role.PUBLIC &&
+      !user.UserDetail.isPhoneVerified &&
+      !user.UserDetail.isVerified
+    ) {
       throw {
         message: 'Forbidden cccess',
         code: HttpStatus.FORBIDDEN,
@@ -159,7 +163,7 @@ export class SuggestionService {
           priority: { select: { title: true, id: true, color: true } },
           status: { select: { id: true, title: true, color: true } },
           user: { select: { id: true, firstName: true, LastName: true } },
-          SuggestionComments: { include: { user: true } },
+          SuggestionComments: { include: { user: true, _count: true } },
         },
       });
 
@@ -415,6 +419,40 @@ export class SuggestionService {
       });
 
       return status;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  async vote(id: number, selection: 'up' | 'down', userId) {
+    try {
+      const isExist = await this.prismaService.suggestionVotes.findMany({
+        where: {
+          AND: [
+            { userId },
+            { suggestionId: id },
+            { isUp: selection === 'up' ? true : false },
+          ],
+        },
+      });
+
+      if (isExist) {
+        throw {
+          message: 'Forbidden cccess',
+          code: HttpStatus.FORBIDDEN,
+          error: 'Anda sudah voting!!',
+        };
+      }
+
+      const suggestions = await this.prismaService.suggestionVotes.create({
+        data: {
+          isUp: selection === 'up' ? true : false,
+          suggestionId: id,
+          userId,
+        },
+      });
+
+      return suggestions;
     } catch (err) {
       throw err;
     }

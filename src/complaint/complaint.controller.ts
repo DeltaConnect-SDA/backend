@@ -342,7 +342,7 @@ export class ComplaintController {
       return res.status(HttpStatus.OK).json({
         success: true,
         code: HttpStatus.OK,
-        message: 'Berhasil mencari laporan!',
+        message: 'Berhasil menampilkan jumlah laporan!',
         data: complaint,
       });
     } catch (err) {

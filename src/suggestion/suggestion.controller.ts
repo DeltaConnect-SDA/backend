@@ -5,6 +5,7 @@ import {
   Get,
   HttpStatus,
   Param,
+  Patch,
   Post,
   Query,
   Res,
@@ -311,6 +312,57 @@ export class SuggestionController {
         success: true,
         code: HttpStatus.OK,
         message: 'Berhasil mengambil data status usulan!',
+        data: response,
+      });
+    } catch (err) {
+      if (err instanceof PrismaClientKnownRequestError) {
+        switch (err.code) {
+          case 'P2025': {
+            res.status(HttpStatus.NOT_FOUND).json({
+              success: false,
+              code: HttpStatus.NOT_FOUND,
+              message: err.message,
+              error: err.name,
+            });
+          }
+          default: {
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+              success: false,
+              code: HttpStatus.INTERNAL_SERVER_ERROR,
+              message: err.message,
+              error: err.name,
+            });
+          }
+        }
+      }
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        code: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: err.message,
+        error: err.name || err.error,
+      });
+    }
+  }
+
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(Role.PUBLIC)
+  @Patch('suggestions/:id/vote')
+  async suggestionVote(
+    @Param('id') id: string,
+    @Body() data: { selection: 'up' | 'down' },
+    @GetUser() user: any,
+    @Res() res: Response,
+  ) {
+    try {
+      const response = await this.suggestionService.vote(
+        +id,
+        data.selection,
+        user.id,
+      );
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        code: HttpStatus.OK,
+        message: 'Berhasil voting usulan!',
         data: response,
       });
     } catch (err) {

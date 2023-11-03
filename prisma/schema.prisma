@@ -393,7 +393,8 @@ model SuggestionFeedBack {
 }
 
 model SuggestionVotes {
-  id           Int        @id @default(autoincrement())
+  id Int @id @default(autoincrement())
+
   suggestion   Suggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
   suggestionId Int
   user         User       @relation(fields: [userId], references: [id])
