@@ -71,7 +71,7 @@ export class ComplaintService {
           });
 
           // Create reference ID
-          const refId = `DC-LP-${dateString}-${(count + 1)
+          const refId = `DC-CP-${dateString}-${(count + 1)
             .toString()
             .padStart(5, '0')}`;
 

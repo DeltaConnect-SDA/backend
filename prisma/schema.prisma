@@ -32,6 +32,12 @@ model User {
   Device              Device[]
   ComplaintActivity   ComplaintActivity[]
   VerificationRequest VerificationRequest[]
+  Suggestion          Suggestion[]
+  SuggestionActivity  SuggestionActivity[]
+  SuggestionSaved     SuggestionSaved[]
+  SuggestionFeedBack  SuggestionFeedBack[]
+  SuggestionComments  SuggestionComments[]
+  SuggestionVotes     SuggestionVotes[]
 }
 
 model UserDetail {
@@ -58,7 +64,8 @@ model Role {
   updatedAt DateTime @updatedAt
 
   User              User[]
-  assignedComplaint Complaint[] @relation("AssignedToRole")
+  assignedComplaint Complaint[]  @relation("AssignedToRole")
+  Suggestion        Suggestion[] @relation("AssignedToRole")
 }
 
 model Status {
@@ -72,6 +79,8 @@ model Status {
   ComplaintActivity   ComplaintActivity[]
   VerificationLog     VerificationLog[]
   VerificationRequest VerificationRequest[]
+  Suggestion          Suggestion[]
+  SuggestionActivity  SuggestionActivity[]
 }
 
 model Complaint {
@@ -129,9 +138,10 @@ model Category {
   id    Int    @id @default(autoincrement())
   title String
 
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  Complaint Complaint[]
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  Complaint  Complaint[]
+  Suggestion Suggestion[]
 }
 
 model ComplaintActivity {
@@ -181,9 +191,10 @@ model Priority {
   title String
   color String
 
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  Complaint Complaint[]
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  Complaint  Complaint[]
+  Suggestion Suggestion[]
 }
 
 model ComplaintFeedBack {
@@ -267,4 +278,144 @@ model VerificationLog {
   statusId  Int?
 
   @@map("verifiaction_logs")
+}
+
+model Suggestion {
+  id     Int    @id @default(autoincrement())
+  ref_id String @unique
+  title  String
+
+  category   Category @relation(fields: [categoryId], references: [id])
+  categoryId Int
+
+  priority   Priority @relation(fields: [priorityId], references: [id])
+  priorityId Int
+
+  description String
+  location    String
+  isVerified  Boolean @default(false)
+
+  total_feedback Int?
+  total_score    Int?
+
+  status   Status @relation(fields: [statusId], references: [id])
+  statusId Int    @default(1)
+
+  upVoteTotal   Int @default(0)
+  downVoteTotal Int @default(0)
+
+  assignTo   Role?   @relation(name: "AssignedToRole", fields: [assignToId], references: [id])
+  assignToId String?
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  SuggestionActivity SuggestionActivity[]
+  SuggestionImages   SuggestionImages[]
+  SuggestionSaved    SuggestionSaved[]
+  SuggestionFeedBack SuggestionFeedBack[]
+  SuggestionComments SuggestionComments[]
+  SuggestionVotes    SuggestionVotes[]
+
+  @@map("suggestions")
+}
+
+model SuggestionImages {
+  id           Int        @id @default(autoincrement())
+  suggestion   Suggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  suggestionId Int
+
+  path        String
+  placeholder String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SuggestionActivity {
+  id           Int        @id @default(autoincrement())
+  status       Status     @relation(fields: [statusId], references: [id])
+  statusId     Int
+  suggestion   Suggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  suggestionId Int
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  title       String
+  descripiton String
+  notes       String?
+
+  createdAt DateTime                   @default(now())
+  updatedAt DateTime                   @updatedAt
+  images    SuggestionActivityImages[]
+}
+
+model SuggestionActivityImages {
+  id                   Int                @id @default(autoincrement())
+  suggestionActivity   SuggestionActivity @relation(fields: [suggestionActivityId], references: [id], onDelete: Cascade)
+  suggestionActivityId Int
+
+  path        String
+  placeholder String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SuggestionSaved {
+  id           Int        @id @default(autoincrement())
+  suggestion   Suggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  suggestionId Int
+  user         User       @relation(fields: [userId], references: [id])
+  userId       String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SuggestionFeedBack {
+  id           Int        @id @default(autoincrement())
+  suggestion   Suggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  suggestionId Int
+  user         User       @relation(fields: [userId], references: [id])
+  userId       String
+
+  feedbackNote String
+  feedackScore Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("suggestion_feedbacks")
+}
+
+model SuggestionVotes {
+  id           Int        @id @default(autoincrement())
+  suggestion   Suggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  suggestionId Int
+  user         User       @relation(fields: [userId], references: [id])
+  userId       String
+  isUp         Boolean
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SuggestionComments {
+  id           Int        @id @default(autoincrement())
+  suggestion   Suggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  suggestionId Int
+  user         User       @relation(fields: [userId], references: [id])
+  userId       String
+
+  content  String
+  Children SuggestionComments[] @relation("Suggestion_Comment_Children")
+  parent   SuggestionComments?  @relation("Suggestion_Comment_Children", fields: [parentId], references: [id])
+  parentId Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

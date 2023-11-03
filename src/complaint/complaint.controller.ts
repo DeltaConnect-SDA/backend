@@ -76,9 +76,9 @@ export class ComplaintController {
         data: complaint,
       });
     } catch (err) {
-      return res.status(err.code).json({
+      return res.status(err.code || HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
-        code: err.code,
+        code: err.code || HttpStatus.INTERNAL_SERVER_ERROR,
         message: 'Internal Server Error',
         error: err.error,
       });
@@ -110,9 +110,9 @@ export class ComplaintController {
         data: complaints,
       });
     } catch (err) {
-      return res.status(err.code).json({
+      return res.status(err.code || HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
-        code: err.code,
+        code: err.code || HttpStatus.INTERNAL_SERVER_ERROR,
         message: err.message,
         error: err.error,
       });
@@ -193,9 +193,9 @@ export class ComplaintController {
         data: complaints,
       });
     } catch (err) {
-      return res.status(err.code).json({
+      return res.status(err.code || HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
-        code: err.code,
+        code: err.code || HttpStatus.INTERNAL_SERVER_ERROR,
         message: err.message,
         error: err.error,
       });
@@ -221,9 +221,9 @@ export class ComplaintController {
         data: complaints,
       });
     } catch (err) {
-      return res.status(err.code).json({
+      return res.status(err.code || HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
-        code: err.code,
+        code: err.code || HttpStatus.INTERNAL_SERVER_ERROR,
         message: err.message,
         error: err.error,
       });
@@ -254,9 +254,9 @@ export class ComplaintController {
         data: complaints,
       });
     } catch (err) {
-      return res.status(err.code).json({
+      return res.status(err.code || HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
-        code: err.code,
+        code: err.code || HttpStatus.INTERNAL_SERVER_ERROR,
         message: 'Internal Server Error',
         error: err.error,
       });
@@ -290,9 +290,9 @@ export class ComplaintController {
         data: complaint,
       });
     } catch (err) {
-      return res.status(err.code).json({
+      return res.status(err.code || HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
-        code: err.code,
+        code: err.code || HttpStatus.INTERNAL_SERVER_ERROR,
         message: 'Internal Server Error',
         error: err.error,
       });
@@ -326,9 +326,9 @@ export class ComplaintController {
         data: complaint,
       });
     } catch (err) {
-      return res.status(err.code).json({
+      return res.status(err.code || HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
-        code: err.code,
+        code: err.code || HttpStatus.INTERNAL_SERVER_ERROR,
         message: 'Internal Server Error',
         error: err.error,
       });
@@ -710,9 +710,9 @@ export class ComplaintController {
         data: complaint,
       });
     } catch (err) {
-      return res.status(err.code).json({
+      return res.status(err.code || HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
-        code: err.code,
+        code: err.code || HttpStatus.INTERNAL_SERVER_ERROR,
         message: err.message,
         error: err.error,
       });
