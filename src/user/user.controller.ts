@@ -191,6 +191,60 @@ export class UserController {
 
   @UseGuards(JwtGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN)
+  @Get('roles/search')
+  async searchRoles(
+    @Query('query') query: string = '',
+    @Query('page') page: number = 1,
+    @Query('perPage') perPage: number = 10,
+    @Query('orderByDate') orderByDate: 'asc' | 'desc' = 'desc',
+    @Res() res: Response,
+  ) {
+    try {
+      const response = await this.userService.searchRole(
+        query,
+        page,
+        perPage,
+        orderByDate,
+      );
+
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        code: HttpStatus.OK,
+        message: 'Berhasil mengambil data petugas!',
+        data: response,
+      });
+    } catch (err) {
+      if (err instanceof PrismaClientKnownRequestError) {
+        switch (err.code) {
+          case 'P2025': {
+            res.status(HttpStatus.NOT_FOUND).json({
+              success: false,
+              code: HttpStatus.NOT_FOUND,
+              message: err.message,
+              error: err.name,
+            });
+          }
+          default: {
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+              success: false,
+              code: HttpStatus.INTERNAL_SERVER_ERROR,
+              message: err.message,
+              error: err.name,
+            });
+          }
+        }
+      }
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        code: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: err.message,
+        error: err.name || err.error,
+      });
+    }
+  }
+
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN)
   @Post('roles')
   async createRole(@Body() data: CreateRoleDTO, @Res() res: Response) {
     try {

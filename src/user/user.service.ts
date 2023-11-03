@@ -247,6 +247,14 @@ export class UserService {
               mode: 'insensitive',
             },
           },
+          {
+            role: {
+              name: {
+                contains: query,
+                mode: 'insensitive',
+              },
+            },
+          },
         ],
       },
     };
@@ -324,5 +332,23 @@ export class UserService {
     });
 
     return role;
+  }
+  async searchRole(query, page, perPage, orderByDate) {
+    const paginate = createPaginator({ perPage });
+    const queryParams: Prisma.RoleFindManyArgs = {
+      include: {
+        _count: true,
+      },
+      orderBy: { createdAt: orderByDate },
+      where: {
+        type: { notIn: ['masyarakat', 'super-admin'] },
+      },
+    };
+
+    try {
+      return paginate(this.prisma.role, queryParams, { page });
+    } catch (err) {
+      throw err;
+    }
   }
 }
