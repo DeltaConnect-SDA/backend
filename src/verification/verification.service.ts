@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { VerificationRequestDTO, VerificationUpdateDTO } from './dto';
 import { Status } from 'src/enum';
 import { decryptData, encryptData } from 'src/utils/crypto';
 import { ConfigService } from '@nestjs/config';
+import { Role } from 'src/auth/enum/role.enum';
 
 @Injectable()
 export class VerificationService {
@@ -47,7 +48,15 @@ export class VerificationService {
     }
   }
 
-  async show(id: string) {
+  async show(id: string, user: any) {
+    if (!id) {
+      throw {
+        message: 'Perminataan tidak ditemukan.',
+        code: HttpStatus.NOT_FOUND,
+        error: 'Request Not Found',
+      };
+    }
+
     const data = await this.prismaService.verificationRequest.findUnique({
       where: { id },
       include: {
@@ -58,12 +67,24 @@ export class VerificationService {
         },
       },
     });
+
+    if (!data) {
+      throw {
+        message: 'Perminataan tidak ditemukan.',
+        code: HttpStatus.NOT_FOUND,
+        error: 'Request Not Found',
+      };
+    } else if (user.role.type === Role.PUBLIC && data.userId !== user.id) {
+      throw {
+        message: 'Anda tidak memiliki akses!',
+        code: HttpStatus.FORBIDDEN,
+        error: 'Forbidden',
+      };
+    }
     delete data.user.password;
     data.user.UserDetail.identityNumber = decryptData(
       Buffer.from(data.user.UserDetail.identityNumber, 'base64'),
     ).toString('ascii');
-    console.log(data);
-
     return data;
   }
 

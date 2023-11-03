@@ -116,11 +116,15 @@ export class VerificationController {
   }
 
   @UseGuards(JwtGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN, Role.AUTHORIZER)
+  @Roles(Role.SUPER_ADMIN, Role.AUTHORIZER, Role.PUBLIC)
   @Get(':id')
-  async showVerificationRequest(@Param('id') id: string, @Res() res: Response) {
+  async showVerificationRequest(
+    @Param('id') id: string,
+    @GetUser() user: any,
+    @Res() res: Response,
+  ) {
     try {
-      const response = await this.verificationService.show(id);
+      const response = await this.verificationService.show(id, user);
       return res.status(HttpStatus.OK).json({
         success: true,
         message: 'Berhasil update status verifikasi.',
@@ -148,9 +152,9 @@ export class VerificationController {
         }
       }
 
-      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      return res.status(err.code || HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
-        code: HttpStatus.INTERNAL_SERVER_ERROR,
+        code: err.code || HttpStatus.INTERNAL_SERVER_ERROR,
         message: err.message,
         error: err.name || err.error,
       });
