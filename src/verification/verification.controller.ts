@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Res,
   UseGuards,
 } from '@nestjs/common';
@@ -62,12 +63,14 @@ export class VerificationController {
           }
         }
       }
-      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        success: false,
-        code: HttpStatus.INTERNAL_SERVER_ERROR,
-        message: err.message,
-        error: err.name || err.error,
-      });
+      return res
+        .status(err.httpStatusCode || HttpStatus.INTERNAL_SERVER_ERROR)
+        .json({
+          success: false,
+          code: err.httpStatusCode || HttpStatus.INTERNAL_SERVER_ERROR,
+          message: err.message,
+          error: err.name || err.error,
+        });
     }
   }
 
@@ -116,6 +119,59 @@ export class VerificationController {
   }
 
   @UseGuards(JwtGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN, Role.AUTHORIZER)
+  @Get('search')
+  async showAllVerificationRequests(
+    @Query('query') query: string = '',
+    @Query('page') page: number = 1,
+    @Query('perPage') perPage: number = 10,
+    @Query('orderByDate') orderByDate: 'asc' | 'desc' = 'desc',
+    @Res() res: Response,
+  ) {
+    try {
+      const response = await this.verificationService.search(
+        query,
+        page,
+        perPage,
+        orderByDate,
+      );
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        message: 'Berhasil mendapatkan data verifikasi.',
+        data: response,
+      });
+    } catch (err) {
+      if (err instanceof PrismaClientKnownRequestError) {
+        switch (err.code) {
+          case 'P2025': {
+            res.status(HttpStatus.NOT_FOUND).json({
+              success: false,
+              code: HttpStatus.NOT_FOUND,
+              message: err.message,
+              error: err.name,
+            });
+          }
+          default: {
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+              success: false,
+              code: HttpStatus.INTERNAL_SERVER_ERROR,
+              message: err.message,
+              error: err.name,
+            });
+          }
+        }
+      }
+
+      return res.status(err.code || HttpStatus.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        code: err.code || HttpStatus.INTERNAL_SERVER_ERROR,
+        message: err.message,
+        error: err.name || err.error,
+      });
+    }
+  }
+
+  @UseGuards(JwtGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN, Role.AUTHORIZER, Role.PUBLIC)
   @Get(':id')
   async showVerificationRequest(
@@ -127,7 +183,7 @@ export class VerificationController {
       const response = await this.verificationService.show(id, user);
       return res.status(HttpStatus.OK).json({
         success: true,
-        message: 'Berhasil update status verifikasi.',
+        message: 'Berhasil mendapatkan data verifikasi.',
         data: response,
       });
     } catch (err) {

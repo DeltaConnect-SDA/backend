@@ -5,6 +5,8 @@ import { Status } from 'src/enum';
 import { decryptData, encryptData } from 'src/utils/crypto';
 import { ConfigService } from '@nestjs/config';
 import { Role } from 'src/auth/enum/role.enum';
+import { createPaginator } from 'prisma-pagination';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class VerificationService {
@@ -14,6 +16,44 @@ export class VerificationService {
   ) {}
 
   async request(data: VerificationRequestDTO, userId: string) {
+    const isExist = await this.prismaService.verificationRequest.findMany({
+      where: {
+        userId,
+        statusId: Status.WAITING,
+      },
+    });
+
+    const isVerified = await this.prismaService.user.findUnique({
+      where: {
+        id: userId,
+      },
+      select: {
+        UserDetail: {
+          select: {
+            isVerified: true,
+          },
+        },
+      },
+    });
+
+    if (isVerified.UserDetail.isVerified) {
+      throw {
+        success: false,
+        httpStatusCode: HttpStatus.FORBIDDEN,
+        message: 'Anda tidak memiliki akses!',
+        error: 'Akun anda telah terverifikasi!',
+      };
+    }
+
+    if (isExist.length > 0) {
+      throw {
+        success: false,
+        httpStatusCode: HttpStatus.FORBIDDEN,
+        message: 'Verifikasi berlangsung ditemukan!',
+        error: 'Verifikasi berlangsung ditemukan!',
+      };
+    }
+
     const encId = encryptData(data.idNumber).toString('base64');
 
     try {
@@ -65,6 +105,7 @@ export class VerificationService {
             UserDetail: true,
           },
         },
+        status: true,
       },
     });
 
@@ -86,6 +127,57 @@ export class VerificationService {
       Buffer.from(data.user.UserDetail.identityNumber, 'base64'),
     ).toString('ascii');
     return data;
+  }
+
+  async search(query, page, perPage, orderByDate) {
+    const paginate = createPaginator({ perPage });
+    const queryParams: Prisma.VerificationRequestFindManyArgs = {
+      orderBy: { createdAt: orderByDate },
+      include: {
+        user: {
+          include: {
+            UserDetail: true,
+          },
+        },
+        status: true,
+      },
+      where: {
+        OR: [
+          {
+            user: {
+              email: {
+                contains: query,
+                mode: 'insensitive',
+              },
+            },
+          },
+          {
+            user: {
+              firstName: {
+                contains: query,
+                mode: 'insensitive',
+              },
+            },
+          },
+          {
+            user: {
+              LastName: {
+                contains: query,
+                mode: 'insensitive',
+              },
+            },
+          },
+        ],
+      },
+    };
+
+    try {
+      return paginate(this.prismaService.verificationRequest, queryParams, {
+        page,
+      });
+    } catch (err) {
+      throw err;
+    }
   }
 
   async update(data: VerificationUpdateDTO) {

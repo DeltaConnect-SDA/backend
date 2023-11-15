@@ -342,6 +342,10 @@ export class UserService {
       orderBy: { createdAt: orderByDate },
       where: {
         type: { notIn: ['masyarakat', 'super-admin'] },
+        name: {
+          contains: query,
+          mode: 'insensitive',
+        },
       },
     };
 
