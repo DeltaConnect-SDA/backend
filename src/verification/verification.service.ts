@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { VerificationRequestDTO, VerificationUpdateDTO } from './dto';
 import { Status } from 'src/enum';
@@ -7,12 +7,16 @@ import { ConfigService } from '@nestjs/config';
 import { Role } from 'src/auth/enum/role.enum';
 import { createPaginator } from 'prisma-pagination';
 import { Prisma } from '@prisma/client';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 
 @Injectable()
 export class VerificationService {
   constructor(
     private prismaService: PrismaService,
     private configService: ConfigService,
+    @InjectQueue('sendNotification')
+    private readonly sendNotification: Queue,
   ) {}
 
   async request(data: VerificationRequestDTO, userId: string) {
@@ -180,7 +184,7 @@ export class VerificationService {
     }
   }
 
-  async update(data: VerificationUpdateDTO) {
+  async update(data: VerificationUpdateDTO, user: any) {
     if (data.status === Status.COMPLETE) {
       const verification = await this.prismaService.verificationRequest.update({
         where: {
@@ -196,7 +200,44 @@ export class VerificationService {
           },
           statusId: data.status,
         },
+        include: {
+          user: {
+            include: {
+              Device: true,
+            },
+          },
+        },
       });
+
+      await verification.user.Device.map(async (device) => {
+        Logger.log(
+          `Sending notification ${device.id} for verification ${verification.id}`,
+          'Complete verification',
+        );
+        // Send notification
+        await this.sendNotification.add('sendVerificationUpdateNotification', {
+          userId: device.userId,
+          deviceToken: device.deviceToken,
+          deviceId: device.id,
+          route: 'Profil',
+          param: verification.id.toString(),
+          type: 'verification',
+          content: {
+            to: device.deviceToken,
+            body: `Hai ${verification.user.firstName}! Permintaan Verifikasimmu diterima oleh ${user.role.name}.`,
+            channelId: 'default',
+            priority: 'high',
+            title: 'Permintaan Verifikasimmu Diterima!',
+            data: {
+              type: 'verification',
+              id: verification.id,
+              route: 'Profil',
+              param: verification.id,
+            },
+          },
+        });
+      });
+
       return await this.prismaService.user.update({
         where: {
           id: verification.userId,

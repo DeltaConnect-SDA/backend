@@ -70,7 +70,33 @@ export class AuthController {
         data: user,
       });
     } catch (err) {
-      return res.status(err.code).json({
+      return res.status(err.code || HttpStatus.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        code: err.code,
+        message: err.message,
+        error: err.error,
+      });
+    }
+  }
+
+  @UseGuards(JwtGuard)
+  @Post('logout')
+  async userLogout(
+    @Body() data: { deviceToken: string },
+    @GetUser() user: any,
+    @Res() res: Response,
+  ) {
+    try {
+      await this.authService.userLogout(user, data.deviceToken);
+
+      return res.status(200).json({
+        success: true,
+        code: HttpStatus.OK,
+        message: 'Pengguna berhasil logout!',
+        data: user,
+      });
+    } catch (err) {
+      return res.status(err.code || HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
         code: err.code,
         message: err.message,

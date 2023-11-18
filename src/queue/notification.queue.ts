@@ -68,4 +68,148 @@ export class NotificationQueue {
       throw new Error(err);
     }
   }
+
+  @Process('sendSuggestionUpdateNotification')
+  async sendSuggestionUpdateNotification(
+    job: Job<{
+      userId: string;
+      deviceToken: string;
+      deviceId: string;
+      route?: string;
+      param?: string;
+      content: ExpoPushMessage;
+      type: string;
+    }>,
+  ) {
+    const { data } = job;
+    const { content, deviceToken, deviceId, userId, route, param, type } = data;
+
+    try {
+      Logger.log('Send push notification');
+      // send push notification
+      await this.notificationService.sendPushNotification(
+        deviceToken,
+        content,
+        deviceId,
+      );
+
+      Logger.log('Store notification to DB');
+      // store notification to DB
+      await this.prismaSerive.user.update({
+        where: {
+          id: userId,
+        },
+        data: {
+          Notification: {
+            create: {
+              title: content.title,
+              content: content.body,
+              route: route || null,
+              param: param || null,
+              type: type,
+            },
+          },
+        },
+      });
+    } catch (err) {
+      log(err);
+      throw new Error(err);
+    }
+  }
+
+  @Process('sendSuggestionVoteNotification')
+  async sendSuggestionVoteNotification(
+    job: Job<{
+      userId: string;
+      deviceToken: string;
+      deviceId: string;
+      route?: string;
+      param?: string;
+      content: ExpoPushMessage;
+      type: string;
+    }>,
+  ) {
+    const { data } = job;
+    const { content, deviceToken, deviceId, userId, route, param, type } = data;
+
+    try {
+      Logger.log('Send push notification');
+      // send push notification
+      await this.notificationService.sendPushNotification(
+        deviceToken,
+        content,
+        deviceId,
+      );
+
+      Logger.log('Store notification to DB');
+      // store notification to DB
+      await this.prismaSerive.user.update({
+        where: {
+          id: userId,
+        },
+        data: {
+          Notification: {
+            create: {
+              title: content.title,
+              content: content.body,
+              route: route || null,
+              param: param || null,
+              type: type,
+            },
+          },
+        },
+      });
+    } catch (err) {
+      log(err);
+      throw new Error(err);
+    }
+  }
+
+  @Process('sendVerificationUpdateNotification')
+  async sendVerificationUpdateNotification(
+    job: Job<{
+      userId: string;
+      deviceToken: string;
+      deviceId: string;
+      route?: string;
+      param?: string;
+      content: ExpoPushMessage;
+      type: string;
+    }>,
+  ) {
+    const { data } = job;
+    const { content, deviceToken, deviceId, userId, route, param, type } = data;
+
+    try {
+      Logger.log('Send push notification');
+      // send push notification
+      await this.notificationService.sendPushNotification(
+        deviceToken,
+        content,
+        deviceId,
+      );
+
+      Logger.log('Store notification to DB');
+      // store notification to DB
+      await this.prismaSerive.user.update({
+        where: {
+          id: userId,
+        },
+        data: {
+          Notification: {
+            create: {
+              title: content.title,
+              content: content.body,
+              route: route || null,
+              param: param || null,
+              type: type,
+            },
+          },
+        },
+      });
+    } catch (err) {
+      log(err);
+      throw new Error(err);
+    }
+  }
 }

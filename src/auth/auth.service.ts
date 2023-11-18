@@ -141,7 +141,11 @@ export class AuthService {
         LastName: true,
         password: true,
         UserDetail: {
-          select: { isEmailVerified: true, isPhoneVerified: true },
+          select: {
+            isEmailVerified: true,
+            isPhoneVerified: true,
+            isVerified: true,
+          },
         },
       },
     });
@@ -516,5 +520,13 @@ export class AuthService {
         message: err.message,
       };
     }
+  }
+
+  async userLogout(user: any, deviceToken: string) {
+    await this.prisma.device.deleteMany({
+      where: {
+        AND: [{ userId: user.id }, { deviceToken }],
+      },
+    });
   }
 }

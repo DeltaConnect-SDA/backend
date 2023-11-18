@@ -79,10 +79,11 @@ export class VerificationController {
   @Patch('update')
   async updateVerificationStatus(
     @Body() data: VerificationUpdateDTO,
+    @GetUser() user: any,
     @Res() res: Response,
   ) {
     try {
-      await this.verificationService.update(data);
+      await this.verificationService.update(data, user);
       return res.status(HttpStatus.NO_CONTENT).json({
         success: true,
         message: 'Berhasil update status verifikasi.',

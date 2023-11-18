@@ -5,4 +5,5 @@ export enum Bucket {
 export enum Folder {
   ASSETS = 'assets',
   COMPLAINT = 'complaint',
+  SUGGESTION = 'suggestion',
 }

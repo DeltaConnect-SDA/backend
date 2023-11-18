@@ -88,4 +88,38 @@ export class ImageQueue {
       throw new Error(err);
     }
   }
+
+  @Process('updateSuggestionActivity')
+  async uploadSuggestionActivityImages(
+    job: Job<{
+      activityId: number;
+      buffer: Buffer;
+      fileName: string;
+      size: number;
+      mimeType: string;
+    }>,
+  ) {
+    const { data } = job;
+    const { activityId, buffer, fileName, size, mimeType } = data;
+    const path = await this.imageService.upload(
+      buffer,
+      `${(Math.random() + 1).toString(36).substring(2)}-${fileName}`,
+      Folder.SUGGESTION,
+      size,
+      mimeType,
+    );
+
+    log('storing images');
+    try {
+      log('creating placeholder');
+      const placeholder = await this.imageService.blurhash(buffer);
+      await this.prismaSerive.suggestionActivityImages.create({
+        data: { suggestionActivityId: activityId, path, placeholder },
+      });
+      log('images stored');
+    } catch (err) {
+      log(err);
+      throw new Error(err);
+    }
+  }
 }
