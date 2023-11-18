@@ -549,71 +549,201 @@ export class SuggestionService {
       };
     }
 
-    const suggestion = await this.prismaService.suggestion.findUnique({
-      where: { id },
-    });
     try {
-      const isExist = await this.prismaService.suggestionVotes.findMany({
+      const existingVote = await this.prismaService.suggestionVotes.findFirst({
         where: {
           userId,
           suggestionId: id,
-          isUp: selection === 'up' ? true : false,
         },
       });
 
-      if (isExist.length > 0) {
-        await this.prismaService.suggestionVotes.deleteMany({
+      if (existingVote) {
+        console.log('exist!');
+        await this.prismaService.suggestionVotes.delete({
           where: {
-            suggestionId: id,
-            userId,
+            id: existingVote.id,
           },
         });
 
-        if (isExist[0].isUp) {
+        const incrementField = existingVote.isUp
+          ? 'upVoteTotal'
+          : 'downVoteTotal';
+        const decrementField = existingVote.isUp
+          ? 'downVoteTotal'
+          : 'upVoteTotal';
+
+        if (selection === (existingVote.isUp ? 'up' : 'down')) {
           await this.prismaService.suggestion.update({
             where: { id },
             data: {
-              upVoteTotal: suggestion.upVoteTotal - 1,
+              [incrementField]: {
+                decrement: 1,
+              },
             },
           });
         } else {
           await this.prismaService.suggestion.update({
             where: { id },
             data: {
-              upVoteTotal: suggestion.downVoteTotal - 1,
+              [incrementField]: {
+                iecrement: 1,
+              },
+              [decrementField]: {
+                dncrement: 1,
+              },
             },
           });
+
+          const newVote = await this.prismaService.suggestionVotes.create({
+            data: {
+              isUp: selection === 'up',
+              suggestionId: id,
+              userId,
+            },
+          });
+
+          return newVote;
         }
+
+        console.log(`exist ${existingVote.isUp ? 'up' : 'down'}!`);
       } else {
-        const suggestions = await this.prismaService.suggestionVotes.create({
+        const newVote = await this.prismaService.suggestionVotes.create({
           data: {
-            isUp: selection === 'up' ? true : false,
+            isUp: selection === 'up',
             suggestionId: id,
             userId,
           },
         });
 
-        if (selection === 'up') {
-          await this.prismaService.suggestion.update({
-            where: { id },
-            data: {
-              upVoteTotal: suggestion.upVoteTotal + 1,
+        const incrementField =
+          selection === 'up' ? 'upVoteTotal' : 'downVoteTotal';
+
+        await this.prismaService.suggestion.update({
+          where: { id },
+          data: {
+            [incrementField]: {
+              increment: 1,
             },
-          });
-        } else {
-          await this.prismaService.suggestion.update({
-            where: { id },
-            data: {
-              upVoteTotal: suggestion.downVoteTotal + 1,
-            },
-          });
-        }
-        return suggestions;
+          },
+        });
+
+        return newVote;
       }
     } catch (err) {
       throw err;
     }
   }
+
+  // async vote(id: number, selection: 'up' | 'down', userId) {
+  //   if (!id) {
+  //     throw {
+  //       message: 'Usulan tidak ditemukan.',
+  //       code: HttpStatus.NOT_FOUND,
+  //       error: 'Suggestion Not Found',
+  //     };
+  //   }
+
+  //   const suggestion = await this.prismaService.suggestion.findUnique({
+  //     where: { id },
+  //   });
+  //   try {
+  //     const isExist = await this.prismaService.suggestionVotes.findMany({
+  //       where: {
+  //         userId,
+  //         suggestionId: id,
+  //       },
+  //     });
+
+  //     if (isExist.length > 0) {
+  //       await this.prismaService.suggestionVotes.deleteMany({
+  //         where: {
+  //           suggestionId: id,
+  //           userId,
+  //         },
+  //       });
+  //       console.log('exist!');
+
+  //       if (isExist[0].isUp) {
+  //         if (selection === 'up') {
+  //           await this.prismaService.suggestion.update({
+  //             where: { id },
+  //             data: {
+  //               upVoteTotal: suggestion.upVoteTotal + 1,
+  //             },
+  //           });
+  //           console.log('selection up!');
+  //         } else {
+  //           await this.prismaService.suggestion.update({
+  //             where: { id },
+  //             data: {
+  //               downVoteTotal: suggestion.downVoteTotal + 1,
+  //             },
+  //           });
+  //           console.log('selection down!');
+  //         }
+  //         await this.prismaService.suggestion.update({
+  //           where: { id },
+  //           data: {
+  //             upVoteTotal: suggestion.upVoteTotal - 1,
+  //           },
+  //         });
+  //         console.log('exist up!');
+  //       } else {
+  //         if (selection === 'up') {
+  //           await this.prismaService.suggestion.update({
+  //             where: { id },
+  //             data: {
+  //               upVoteTotal: suggestion.upVoteTotal + 1,
+  //             },
+  //           });
+  //           console.log('selection up!');
+  //         } else {
+  //           await this.prismaService.suggestion.update({
+  //             where: { id },
+  //             data: {
+  //               downVoteTotal: suggestion.downVoteTotal + 1,
+  //             },
+  //           });
+  //           console.log('selection down!');
+  //         }
+  //         await this.prismaService.suggestion.update({
+  //           where: { id },
+  //           data: {
+  //             downVoteTotal: suggestion.downVoteTotal - 1,
+  //           },
+  //         });
+  //         console.log('exist down!');
+  //       }
+  //     } else {
+  //       const suggestions = await this.prismaService.suggestionVotes.create({
+  //         data: {
+  //           isUp: selection === 'up' ? true : false,
+  //           suggestionId: id,
+  //           userId,
+  //         },
+  //       });
+
+  //       if (selection === 'up') {
+  //         await this.prismaService.suggestion.update({
+  //           where: { id },
+  //           data: {
+  //             upVoteTotal: suggestion.upVoteTotal + 1,
+  //           },
+  //         });
+  //       } else {
+  //         await this.prismaService.suggestion.update({
+  //           where: { id },
+  //           data: {
+  //             downVoteTotal: suggestion.downVoteTotal + 1,
+  //           },
+  //         });
+  //       }
+  //       return suggestions;
+  //     }
+  //   } catch (err) {
+  //     throw err;
+  //   }
+  // }
 
   async getVotes(id: number) {
     try {
